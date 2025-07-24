@@ -96,13 +96,13 @@ export const MoodProfiler = () => {
             <h3 className="text-2xl font-semibold mb-6 text-foreground">
               Session Duration
             </h3>
-            <div className="flex space-x-4">
+            <div className="grid grid-cols-2 sm:flex sm:space-x-4 gap-3 sm:gap-0">
               {[5, 10, 15, 20].map((min) => (
                 <Button
                   key={min}
                   variant={duration === min ? "neural" : "outline"}
                   onClick={() => setDuration(min)}
-                  className="px-6 py-3"
+                  className="px-6 py-3 flex-1 sm:flex-none"
                 >
                   {min} min
                 </Button>
