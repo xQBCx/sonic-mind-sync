@@ -1,0 +1,128 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Brain, Zap, Coffee, Moon, Target, Headphones } from "lucide-react";
+
+const moods = [
+  { id: "focus", name: "Peak Focus", icon: Target, color: "bg-primary", description: "Deep concentration for complex topics" },
+  { id: "energize", name: "Power-Up", icon: Zap, color: "bg-primary-glow", description: "High energy learning and motivation" },
+  { id: "calm", name: "Ambient Chill", icon: Moon, color: "bg-secondary", description: "Relaxed absorption and gentle learning" },
+  { id: "morning", name: "Gentle Wake-Up", icon: Coffee, color: "bg-accent", description: "Easy morning briefings" },
+  { id: "deep", name: "Deep Dive", icon: Brain, color: "bg-primary", description: "Complex concepts with full immersion" },
+  { id: "background", name: "Background Listen", icon: Headphones, color: "bg-muted", description: "Passive learning while multitasking" }
+];
+
+const topics = [
+  "AI & Technology", "Business", "Science", "Politics", "Health", 
+  "Climate", "Space", "Economics", "Education", "Startups"
+];
+
+export const MoodProfiler = () => {
+  const [selectedMood, setSelectedMood] = useState<string>("");
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [duration, setDuration] = useState<number>(10);
+
+  const toggleTopic = (topic: string) => {
+    setSelectedTopics(prev => 
+      prev.includes(topic) 
+        ? prev.filter(t => t !== topic)
+        : [...prev, topic]
+    );
+  };
+
+  return (
+    <section className="py-24 bg-background">
+      <div className="container mx-auto px-6">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold mb-4 text-foreground">
+            Build Your Neural Brief
+          </h2>
+          <p className="text-lg text-muted-foreground">
+            Customize your learning experience for optimal brain engagement
+          </p>
+        </div>
+
+        <div className="max-w-4xl mx-auto space-y-12">
+          {/* Mood Selection */}
+          <Card className="p-8 bg-card/50 border-border/20 backdrop-blur-sm">
+            <h3 className="text-2xl font-semibold mb-6 text-foreground">
+              Choose Your Learning Mood
+            </h3>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {moods.map((mood) => (
+                <button
+                  key={mood.id}
+                  onClick={() => setSelectedMood(mood.id)}
+                  className={`p-4 rounded-xl border-2 transition-all duration-300 text-left hover:shadow-glow ${
+                    selectedMood === mood.id 
+                      ? 'border-primary shadow-glow bg-primary/10' 
+                      : 'border-border/20 hover:border-primary/30'
+                  }`}
+                >
+                  <div className="flex items-center mb-3">
+                    <div className={`w-10 h-10 rounded-lg ${mood.color} flex items-center justify-center mr-3`}>
+                      <mood.icon className="w-5 h-5 text-primary-foreground" />
+                    </div>
+                    <span className="font-semibold text-foreground">{mood.name}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{mood.description}</p>
+                </button>
+              ))}
+            </div>
+          </Card>
+
+          {/* Topic Selection */}
+          <Card className="p-8 bg-card/50 border-border/20 backdrop-blur-sm">
+            <h3 className="text-2xl font-semibold mb-6 text-foreground">
+              Select Your Topics
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              {topics.map((topic) => (
+                <Badge
+                  key={topic}
+                  variant={selectedTopics.includes(topic) ? "default" : "outline"}
+                  className="cursor-pointer py-2 px-4 text-sm transition-all duration-200 hover:shadow-glow"
+                  onClick={() => toggleTopic(topic)}
+                >
+                  {topic}
+                </Badge>
+              ))}
+            </div>
+          </Card>
+
+          {/* Duration Selection */}
+          <Card className="p-8 bg-card/50 border-border/20 backdrop-blur-sm">
+            <h3 className="text-2xl font-semibold mb-6 text-foreground">
+              Session Duration
+            </h3>
+            <div className="flex space-x-4">
+              {[5, 10, 15, 20].map((min) => (
+                <Button
+                  key={min}
+                  variant={duration === min ? "neural" : "outline"}
+                  onClick={() => setDuration(min)}
+                  className="px-6 py-3"
+                >
+                  {min} min
+                </Button>
+              ))}
+            </div>
+          </Card>
+
+          {/* Generate Button */}
+          <div className="text-center">
+            <Button 
+              variant="neural" 
+              size="lg" 
+              className="px-12 py-6 text-lg"
+              disabled={!selectedMood || selectedTopics.length === 0}
+            >
+              Generate My SonicBrief
+            </Button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
