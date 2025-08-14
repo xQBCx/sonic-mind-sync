@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Brain, Zap, Coffee, Moon, Target, Headphones } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const moods = [
   { id: "focus", name: "Peak Focus", icon: Target, color: "bg-primary", description: "Deep concentration for complex topics" },
@@ -112,14 +113,15 @@ export const MoodProfiler = () => {
 
           {/* Generate Button */}
           <div className="text-center">
-            <Button 
-              variant="neural" 
-              size="lg" 
-              className="px-12 py-6 text-lg"
-              disabled={!selectedMood || selectedTopics.length === 0}
-            >
-              Generate My SonicBrief
-            </Button>
+            <Link to="/generate">
+              <Button 
+                variant="neural" 
+                size="lg" 
+                className="px-12 py-6 text-lg"
+              >
+                Generate My SonicBrief
+              </Button>
+            </Link>
           </div>
         </div>
       </div>

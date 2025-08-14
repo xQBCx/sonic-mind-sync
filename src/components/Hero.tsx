@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { PlayIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const Hero = () => {
   return (
@@ -41,10 +42,12 @@ export const Hero = () => {
 
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Button variant="neural" size="lg" className="px-8 py-6 text-lg">
-            <PlayIcon className="w-5 h-5 mr-2" />
-            Start Learning
-          </Button>
+          <Link to="/generate">
+            <Button variant="neural" size="lg" className="px-8 py-6 text-lg">
+              <PlayIcon className="w-5 h-5 mr-2" />
+              Start Learning
+            </Button>
+          </Link>
           <Button variant="outline" size="lg" className="px-8 py-6 text-lg">
             How It Works
           </Button>
