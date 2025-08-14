@@ -198,7 +198,7 @@ export default function Brief() {
             <>
               {/* Audio Player */}
               <div className="mb-8">
-                <AudioPlayer />
+                <AudioPlayer audioUrl={brief.audioUrl} title="Your SonicBrief" />
               </div>
 
               {/* Action Buttons */}
