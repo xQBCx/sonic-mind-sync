@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { useAuth } from '@/hooks/useAuth'
-import { useToast } from '@/hooks/use-toast'
+import { supabase } from '@/lib/supabase'
+import { toast } from '@/hooks/use-toast'
 
 interface AuthModalProps {
   open: boolean
@@ -12,40 +12,30 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ open, onOpenChange }: AuthModalProps) {
-  const [isLogin, setIsLogin] = useState(true)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
-  const { signIn, signUp } = useAuth()
-  const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const onLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    setLoading(false)
+    if (error) return toast({ title: "Login failed", description: error.message, variant: "destructive" })
+    toast({ title: "Logged in" })
+    onOpenChange(false)
+    setEmail('')
+    setPassword('')
+  }
 
-    try {
-      const { error } = isLogin 
-        ? await signIn(email, password)
-        : await signUp(email, password)
-
-      if (error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        })
-      } else {
-        toast({
-          title: isLogin ? "Welcome back!" : "Account created!",
-          description: isLogin ? "You're now signed in." : "Check your email to verify your account.",
-        })
-        onOpenChange(false)
-        setEmail('')
-        setPassword('')
-      }
-    } finally {
-      setLoading(false)
-    }
+  const onForgot = async () => {
+    if (!email) return toast({ title: "Enter your email first" })
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset`,
+    })
+    if (error) return toast({ title: "Reset failed", description: error.message, variant: "destructive" })
+    toast({ title: "Check your email", description: "Password reset link sent." })
   }
 
   return (
@@ -53,48 +43,36 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {isLogin ? 'Sign in to SonicBrief' : 'Create your account'}
+            Sign in to SonicBrief
           </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
+        <form onSubmit={onLogin} className="space-y-3">
+          <div className="space-y-1">
             <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              placeholder="Enter your email"
-            />
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </div>
-          
-          <div className="space-y-2">
+          <div className="space-y-1">
             <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              placeholder="Enter your password"
-              minLength={6}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="password"
+                type={showPw ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <Button type="button" variant="secondary" onClick={() => setShowPw((v) => !v)}>
+                {showPw ? "Hide" : "Show"}
+              </Button>
+            </div>
           </div>
-          
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Loading...' : (isLogin ? 'Sign In' : 'Sign Up')}
-          </Button>
-          
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-full"
-            onClick={() => setIsLogin(!isLogin)}
-          >
-            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-          </Button>
+          <div className="flex items-center justify-between">
+            <Button type="button" variant="link" className="px-0" onClick={onForgot}>
+              Forgot password?
+            </Button>
+            <Button type="submit" disabled={loading}>{loading ? "Logging in…" : "Login"}</Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
