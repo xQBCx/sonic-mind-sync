@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthModal } from "@/components/AuthModal";
 import { Header } from "@/components/Header";
+import GenerateBriefButton from "@/components/GenerateBriefButton";
 
 const moods = [
   { id: 'focus', name: 'Focus', description: 'Deep concentration and clarity' },
@@ -217,6 +218,11 @@ export default function Generate() {
             >
               {isGenerating ? "Generating Your Brief..." : "Generate My SonicBrief"}
             </Button>
+            
+            {/* Test Button */}
+            <div className="mt-4">
+              <GenerateBriefButton />
+            </div>
           </Card>
         </div>
       </div>
