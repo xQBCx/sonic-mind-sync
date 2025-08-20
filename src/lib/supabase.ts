@@ -1,9 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL!
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY!
+// TEMPORARY: hardcode public client settings so the app runs.
+// Replace these two strings with your values from Supabase → Settings → API.
+const SUPABASE_URL = "https://ldcofddghsruqarlgagh.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkY29mZGRnaHNydXFhcmxnYWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MjQ4MTUsImV4cCI6MjA3MTMwMDgxNX0.TuoRHeBuDkCH4cAJNx4wX9fO_YIz1kl1RyFNwIe2nXE";
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 export type Database = {
   public: {
