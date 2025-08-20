@@ -57,6 +57,9 @@ All colors MUST be HSL. Orange/Purple gradient theme for neuromodulation-powered
     /* Audio Visualization */
     --pulse-primary: 0 0 20px hsl(var(--primary) / 0.6);
     --pulse-secondary: 0 0 30px hsl(270, 60%, 50% / 0.4);
+    
+    /* Animations */
+    --animate-pulse-glow: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
   /* Light mode remains the same - SonicBrief uses dark theme by default */
@@ -86,5 +89,20 @@ All colors MUST be HSL. Orange/Purple gradient theme for neuromodulation-powered
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  @keyframes pulse-glow {
+    0%, 100% {
+      box-shadow: var(--shadow-glow);
+    }
+    50% {
+      box-shadow: var(--pulse-primary);
+    }
+  }
+  
+  .animate-pulse-glow {
+    animation: var(--animate-pulse-glow);
   }
 }

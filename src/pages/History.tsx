@@ -5,12 +5,17 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getBriefHistory, BriefHistoryItem } from "@/lib/api";
 import { ArrowLeft, Play, Clock } from "lucide-react";
+import { Header } from "@/components/Header";
 
 export default function History() {
   const [history, setHistory] = useState<BriefHistoryItem[]>([]);
 
   useEffect(() => {
-    setHistory(getBriefHistory());
+    const loadHistory = async () => {
+      const historyData = await getBriefHistory();
+      setHistory(historyData);
+    };
+    loadHistory();
   }, []);
 
   const formatDate = (dateString: string) => {
@@ -25,6 +30,7 @@ export default function History() {
 
   return (
     <div className="min-h-screen bg-gradient-background">
+      <Header />
       <div className="container mx-auto px-6 py-12">
         <div className="max-w-4xl mx-auto">
           {/* Header */}

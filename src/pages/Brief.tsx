@@ -9,6 +9,7 @@ import { AudioPlayer } from "@/components/AudioPlayer";
 import { getBrief, GetBriefResponse } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { Copy, Download, ChevronDown, History, ArrowLeft } from "lucide-react";
+import { Header } from "@/components/Header";
 
 const statusMessages = {
   queued: "Your brief is in the queue...",
@@ -130,6 +131,7 @@ export default function Brief() {
 
   return (
     <div className="min-h-screen bg-gradient-background">
+      <Header />
       <div className="container mx-auto px-6 py-12">
         <div className="max-w-4xl mx-auto">
           {/* Header */}

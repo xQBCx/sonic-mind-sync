@@ -1,15 +1,15 @@
 import { Hero } from "@/components/Hero";
 import { HowItWorks } from "@/components/HowItWorks";
 import { MoodProfiler } from "@/components/MoodProfiler";
-import { AudioPlayer } from "@/components/AudioPlayer";
+import { Header } from "@/components/Header";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-background">
+      <Header />
       <Hero />
       <HowItWorks />
       <MoodProfiler />
-      <AudioPlayer />
     </div>
   );
 };

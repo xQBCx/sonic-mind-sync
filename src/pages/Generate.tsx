@@ -11,6 +11,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { ChevronDown } from "lucide-react";
 import { createBrief, saveBriefToHistory } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthModal } from "@/components/AuthModal";
+import { Header } from "@/components/Header";
 
 const moods = [
   { id: 'focus', name: 'Focus', description: 'Deep concentration and clarity' },
@@ -20,6 +23,7 @@ const moods = [
 
 export default function Generate() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedMood, setSelectedMood] = useState<'focus' | 'energy' | 'calm' | null>(null);
   const [topicsInput, setTopicsInput] = useState("");
   const [duration, setDuration] = useState([120]);
@@ -27,10 +31,16 @@ export default function Generate() {
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const topics = topicsInput.split(',').map(t => t.trim()).filter(t => t.length > 0);
 
   const handleGenerate = async () => {
+    if (!user) {
+      setAuthModalOpen(true);
+      return;
+    }
+    
     if (!selectedMood || topics.length === 0) return;
     
     setIsGenerating(true);
@@ -43,7 +53,7 @@ export default function Generate() {
       });
 
       // Save to history
-      saveBriefToHistory({
+      await saveBriefToHistory({
         id: result.briefId,
         mood: selectedMood,
         topics,
@@ -80,6 +90,7 @@ export default function Generate() {
 
   return (
     <div className="min-h-screen bg-gradient-background">
+      <Header />
       <div className="container mx-auto px-6 py-24">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-12">
@@ -209,6 +220,8 @@ export default function Generate() {
           </Card>
         </div>
       </div>
+      
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );
 }
