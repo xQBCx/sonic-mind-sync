@@ -2,9 +2,15 @@ import { supabase } from "@/lib/supabase";
 
 type Mood = "focus" | "energy" | "calm";
 
-export async function createBrief(params: { mood: Mood; topics: string[]; duration_sec: number }) {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not signed in");
+export async function createBrief(params: {
+  mood: Mood;
+  topics: string[];
+  duration_sec: number;
+}) {
+  const { data: { user }, error: uerr } = await supabase.auth.getUser();
+  if (uerr) throw uerr;
+  if (!user) throw new Error("You must be signed in.");
+
   const { data, error } = await supabase
     .from("briefs")
     .insert({
@@ -17,20 +23,23 @@ export async function createBrief(params: { mood: Mood; topics: string[]; durati
     .select("id")
     .single();
   if (error) throw error;
-  
-  // Auto-process after 10 seconds (mock backend job)
-  setTimeout(async () => {
+  const id = data.id as string;
+
+  // Mock mode: flip to ready after ~10s
+  // (keeps working demo without real backend pipeline)
+  window.setTimeout(async () => {
     await supabase
       .from("briefs")
       .update({
         status: "ready",
         audio_url: "/sample.mp3",
-        script: "This is a sample SonicBrief script generated in mock mode.",
+        script:
+          "This is a sample SonicBrief script generated in mock mode.",
       })
-      .eq("id", data.id);
+      .eq("id", id);
   }, 10000);
-  
-  return data.id as string;
+
+  return { id };
 }
 
 // TEMP: simulate the pipeline, then mark as ready with sample audio

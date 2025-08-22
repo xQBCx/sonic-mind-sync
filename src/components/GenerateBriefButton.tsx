@@ -1,21 +1,29 @@
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
 import { createBrief } from "@/lib/briefs";
+import { supabase } from "@/lib/supabase";
 
 export default function GenerateBriefButton() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const nav = useNavigate();
 
   const onClick = async () => {
     setMsg(null);
     setLoading(true);
     try {
-      const { data: { user }, error: userErr } = await supabase.auth.getUser();
-      if (userErr) throw userErr;
+      const { data: { user }, error: uerr } = await supabase.auth.getUser();
+      if (uerr) throw uerr;
       if (!user) throw new Error("You must be signed in.");
 
-      const id = await createBrief({ mood: "focus", topics: ["starter"], duration_sec: 120 });
-      setMsg("Queued. Preparing your brief… (~10s)");
+      const { id } = await createBrief({
+        mood: "focus",
+        topics: ["starter"],
+        duration_sec: 120,
+      });
+
+      setMsg("✅ Brief created (queued). Opening…");
+      nav(`/brief/${id}`);
     } catch (e: any) {
       setMsg(`❌ ${e?.message || "Failed to create brief"}`);
     } finally {
