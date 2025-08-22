@@ -16,14 +16,14 @@ export default function GenerateBriefButton() {
       if (uerr) throw uerr;
       if (!user) throw new Error("You must be signed in.");
 
-      const { id } = await createBrief({
+      const { briefId } = await createBrief({
         mood: "focus",
         topics: ["starter"],
         duration_sec: 120,
       });
 
       setMsg("✅ Brief created (queued). Opening…");
-      nav(`/brief/${id}`);
+      nav(`/brief/${briefId}`);
     } catch (e: any) {
       setMsg(`❌ ${e?.message || "Failed to create brief"}`);
     } finally {

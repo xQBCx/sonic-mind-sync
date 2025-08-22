@@ -39,7 +39,7 @@ export async function createBrief(params: {
       .eq("id", id);
   }, 10000);
 
-  return { id };
+  return { briefId: id };
 }
 
 // TEMP: simulate the pipeline, then mark as ready with sample audio
