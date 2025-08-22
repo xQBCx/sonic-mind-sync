@@ -17,6 +17,19 @@ export async function createBrief(params: { mood: Mood; topics: string[]; durati
     .select("id")
     .single();
   if (error) throw error;
+  
+  // Auto-process after 10 seconds (mock backend job)
+  setTimeout(async () => {
+    await supabase
+      .from("briefs")
+      .update({
+        status: "ready",
+        audio_url: "/sample.mp3",
+        script: "This is a sample SonicBrief script generated in mock mode.",
+      })
+      .eq("id", data.id);
+  }, 10000);
+  
   return data.id as string;
 }
 

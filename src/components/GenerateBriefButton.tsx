@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { createBrief, mockProcessBrief } from "@/lib/briefs";
+import { createBrief } from "@/lib/briefs";
 
 export default function GenerateBriefButton() {
   const [loading, setLoading] = useState(false);
@@ -16,8 +16,6 @@ export default function GenerateBriefButton() {
 
       const id = await createBrief({ mood: "focus", topics: ["starter"], duration_sec: 120 });
       setMsg("Queued. Preparing your brief… (~10s)");
-      // kick off mock processing (no await, fire-and-forget)
-      void mockProcessBrief(id);
     } catch (e: any) {
       setMsg(`❌ ${e?.message || "Failed to create brief"}`);
     } finally {
