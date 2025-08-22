@@ -42,6 +42,22 @@ export async function createBrief(params: {
   return { briefId: id };
 }
 
+export async function listMyBriefs(limit = 10) {
+  const { data: { user }, error: uerr } = await supabase.auth.getUser();
+  if (uerr) throw uerr;
+  if (!user) throw new Error("You must be signed in.");
+
+  const { data, error } = await supabase
+    .from("briefs")
+    .select("id, mood, topics, duration_sec, status, created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  
+  if (error) throw error;
+  return data;
+}
+
 // TEMP: simulate the pipeline, then mark as ready with sample audio
 export async function mockProcessBrief(id: string) {
   await new Promise((r) => setTimeout(r, 10000));
