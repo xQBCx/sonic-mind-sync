@@ -37,13 +37,13 @@ const Index = () => {
           {user ? (
             <Link to="/generate">
               <Button size="lg" className="text-lg px-8 py-4">
-                Generate Your First Brief
+                Create Your SonicBrief
               </Button>
             </Link>
           ) : (
             <Link to="/auth">
               <Button size="lg" className="text-lg px-8 py-4">
-                Get Started Free
+                Start Creating
               </Button>
             </Link>
           )}

@@ -2,9 +2,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 
-const isMock =
-  String(import.meta.env.VITE_MOCK ?? '1') === '1'  // default to on for safety
-  || String(import.meta.env.MODE ?? '') === 'development';
+const isMock = false; // Use real Supabase backend
 
 type BriefStatus =
   | 'queued' | 'summarizing' | 'tts' | 'music' | 'mixing' | 'uploading' | 'ready' | 'error';
