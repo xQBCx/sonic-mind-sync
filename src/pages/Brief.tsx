@@ -3,9 +3,20 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { AudioPlayer } from "@/components/AudioPlayer";
+import { MultiSegmentAudioPlayer } from "@/components/MultiSegmentAudioPlayer";
 import { useAuth } from "@/hooks/useAuth";
 import { Header } from "@/components/Header";
 import { Loader2 } from "lucide-react";
+
+interface AudioSegment {
+  id: string;
+  segment_type: 'intro_music' | 'affirmation' | 'content' | 'outro' | 'ambient';
+  sequence_order: number;
+  audio_url?: string;
+  script?: string;
+  duration_sec?: number;
+  status: 'pending' | 'generating' | 'ready' | 'error';
+}
 
 type Brief = {
   id: string;
@@ -19,6 +30,9 @@ type Brief = {
   created_at: string;
   updated_at: string;
   user_id: string;
+  flow_type?: 'single' | 'morning' | 'midday' | 'study' | 'winddown';
+  background_music_url?: string;
+  total_segments?: number;
 };
 
 export default function BriefPage() {
@@ -26,6 +40,7 @@ export default function BriefPage() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const [brief, setBrief] = useState<Brief | null>(null);
+  const [segments, setSegments] = useState<AudioSegment[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
@@ -57,6 +72,20 @@ export default function BriefPage() {
       if (error) { setErr(error.message); setLoading(false); return; }
       if (!data) { setErr("Brief not found"); setLoading(false); return; }
       setBrief(data as Brief);
+
+      // Fetch segments if this is a multi-segment brief
+      if (data.total_segments && data.total_segments > 1) {
+        const { data: segmentData, error: segmentError } = await supabase
+          .from('audio_segments')
+          .select('*')
+          .eq('brief_id', id)
+          .order('sequence_order');
+
+        if (!segmentError && segmentData) {
+          setSegments(segmentData as AudioSegment[]);
+        }
+      }
+
       setLoading(false);
       // re-poll every 3s until not queued (or until ready/error)
       if (data.status && ["queued","summarizing","tts","music","mixing","uploading"].includes(data.status)) {
@@ -119,10 +148,23 @@ export default function BriefPage() {
           <Badge>{brief.status}</Badge>
         </div>
 
-        {brief.status === "ready" && brief.audio_url ? (
-          <AudioPlayer audioUrl={brief.audio_url} />
+        {brief.status === "ready" ? (
+          brief.total_segments && brief.total_segments > 1 ? (
+            <MultiSegmentAudioPlayer 
+              segments={segments}
+              title="Your SonicBrief"
+              flowType={brief.flow_type}
+              backgroundMusicUrl={brief.background_music_url}
+            />
+          ) : brief.audio_url ? (
+            <AudioPlayer audioUrl={brief.audio_url} />
+          ) : (
+            <div className="text-muted-foreground">No audio content available</div>
+          )
         ) : brief.status === "error" ? (
-          <div className="text-red-300">Generation failed.</div>
+          <div className="text-red-300">
+            Generation failed: {brief.error_message || 'Unknown error'}
+          </div>
         ) : (
           <div className="opacity-70">Your brief is being prepared…</div>
         )}

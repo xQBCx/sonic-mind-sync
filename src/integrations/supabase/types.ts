@@ -14,46 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      audio_segments: {
+        Row: {
+          audio_url: string | null
+          brief_id: string
+          created_at: string
+          duration_sec: number | null
+          id: string
+          script: string | null
+          segment_type: string
+          sequence_order: number
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          audio_url?: string | null
+          brief_id: string
+          created_at?: string
+          duration_sec?: number | null
+          id?: string
+          script?: string | null
+          segment_type: string
+          sequence_order: number
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          audio_url?: string | null
+          brief_id?: string
+          created_at?: string
+          duration_sec?: number | null
+          id?: string
+          script?: string | null
+          segment_type?: string
+          sequence_order?: number
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audio_segments_brief_id_fkey"
+            columns: ["brief_id"]
+            isOneToOne: false
+            referencedRelation: "briefs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       briefs: {
         Row: {
           audio_url: string | null
+          background_music_url: string | null
           created_at: string | null
           duration_sec: number | null
           error_message: string | null
+          flow_type: string | null
           id: string
           mood: string | null
           script: string | null
+          segments: Json | null
           sound_effect_url: string | null
           status: string | null
           topics: string[] | null
+          total_segments: number | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
           audio_url?: string | null
+          background_music_url?: string | null
           created_at?: string | null
           duration_sec?: number | null
           error_message?: string | null
+          flow_type?: string | null
           id?: string
           mood?: string | null
           script?: string | null
+          segments?: Json | null
           sound_effect_url?: string | null
           status?: string | null
           topics?: string[] | null
+          total_segments?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           audio_url?: string | null
+          background_music_url?: string | null
           created_at?: string | null
           duration_sec?: number | null
           error_message?: string | null
+          flow_type?: string | null
           id?: string
           mood?: string | null
           script?: string | null
+          segments?: Json | null
           sound_effect_url?: string | null
           status?: string | null
           topics?: string[] | null
+          total_segments?: number | null
           updated_at?: string | null
           user_id?: string | null
         }
