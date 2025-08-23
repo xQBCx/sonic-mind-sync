@@ -97,7 +97,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_user_profile: {
+        Args: {
+          p_age?: number
+          p_interests?: string
+          p_language_preference?: string
+          p_learning_goals?: string
+          p_origin?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

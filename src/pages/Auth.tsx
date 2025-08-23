@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { toast } from '@/hooks/use-toast'
+import { UserProfileSetup } from '@/components/UserProfileSetup'
 
 export default function Auth() {
   const navigate = useNavigate()
@@ -20,6 +21,8 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showProfileSetup, setShowProfileSetup] = useState(false)
+  const [justSignedUp, setJustSignedUp] = useState(false)
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -72,9 +75,11 @@ export default function Auth() {
         }
       } else {
         if (!isLogin) {
+          setJustSignedUp(true)
+          setShowProfileSetup(true)
           toast({
             title: "Account created!",
-            description: "Welcome to SonicBrief. You can now generate your first brief.",
+            description: "Let's personalize your SonicBrief experience.",
           })
         } else {
           toast({
@@ -104,6 +109,28 @@ export default function Auth() {
       <div className="min-h-screen bg-gradient-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    )
+  }
+
+  // Show profile setup for new users
+  if (showProfileSetup) {
+    return (
+      <UserProfileSetup
+        onComplete={() => {
+          setShowProfileSetup(false)
+          toast({
+            title: "Welcome to SonicBrief!",
+            description: "Your profile has been saved. Ready to create your first brief!",
+          })
+          const redirectTo = searchParams.get('redirectTo') || '/'
+          navigate(redirectTo)
+        }}
+        onSkip={() => {
+          setShowProfileSetup(false)
+          const redirectTo = searchParams.get('redirectTo') || '/'
+          navigate(redirectTo)
+        }}
+      />
     )
   }
 
