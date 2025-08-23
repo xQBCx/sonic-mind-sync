@@ -118,6 +118,36 @@ export type Database = {
         }
         Relationships: []
       }
+      personalization_insights: {
+        Row: {
+          confidence_score: number | null
+          created_at: string
+          id: string
+          insight_data: Json
+          insight_type: string
+          last_updated: string
+          user_id: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          insight_data: Json
+          insight_type: string
+          last_updated?: string
+          user_id: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string
+          id?: string
+          insight_data?: Json
+          insight_type?: string
+          last_updated?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           age: number | null
@@ -229,6 +259,83 @@ export type Database = {
         }
         Relationships: []
       }
+      user_interaction_logs: {
+        Row: {
+          brief_id: string | null
+          created_at: string
+          id: string
+          interaction_type: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          brief_id?: string | null
+          created_at?: string
+          id?: string
+          interaction_type: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          brief_id?: string | null
+          created_at?: string
+          id?: string
+          interaction_type?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_interaction_logs_brief_id_fkey"
+            columns: ["brief_id"]
+            isOneToOne: false
+            referencedRelation: "briefs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_learning_preferences: {
+        Row: {
+          created_at: string
+          difficulty_preference: string | null
+          favorite_topics: string[] | null
+          id: string
+          learning_style: string | null
+          music_preferences: Json | null
+          preferred_duration_sec: number | null
+          preferred_mood: string | null
+          time_of_day_preference: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty_preference?: string | null
+          favorite_topics?: string[] | null
+          id?: string
+          learning_style?: string | null
+          music_preferences?: Json | null
+          preferred_duration_sec?: number | null
+          preferred_mood?: string | null
+          time_of_day_preference?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          difficulty_preference?: string | null
+          favorite_topics?: string[] | null
+          id?: string
+          learning_style?: string | null
+          music_preferences?: Json | null
+          preferred_duration_sec?: number | null
+          preferred_mood?: string | null
+          time_of_day_preference?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -251,6 +358,28 @@ export type Database = {
           p_context?: Json
           p_event_type: string
           p_session_duration_sec?: number
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      track_user_interaction: {
+        Args: {
+          p_brief_id?: string
+          p_interaction_type: string
+          p_metadata?: Json
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      update_user_learning_preferences: {
+        Args: {
+          p_difficulty_preference?: string
+          p_favorite_topics?: string[]
+          p_learning_style?: string
+          p_music_preferences?: Json
+          p_preferred_duration_sec?: number
+          p_preferred_mood?: string
+          p_time_of_day_preference?: string
           p_user_id: string
         }
         Returns: undefined
