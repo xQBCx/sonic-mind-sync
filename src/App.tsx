@@ -8,6 +8,7 @@ import Generate from "./pages/Generate";
 import Brief from "./pages/Brief";
 import History from "./pages/History";
 import Auth from "./pages/Auth";
+import Blog from "./pages/Blog";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/generate" element={<Generate />} />
           <Route path="/brief/:id" element={<Brief />} />
           <Route path="/history" element={<History />} />
+          <Route path="/blog" element={<Blog />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

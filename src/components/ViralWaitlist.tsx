@@ -54,7 +54,7 @@ export const ViralWaitlist = ({ onSignup }: ViralWaitlistProps) => {
     
     switch (platform) {
       case 'twitter':
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(fullText)}`, '_blank');
+        window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(fullText)}`, '_blank');
         break;
       case 'linkedin':
         window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, '_blank');
@@ -133,7 +133,7 @@ export const ViralWaitlist = ({ onSignup }: ViralWaitlistProps) => {
               className="border-primary/30 hover:bg-primary/10"
             >
               <Share2 className="h-4 w-4 mr-2" />
-              Twitter
+              X (Twitter)
             </Button>
             <Button
               variant="outline"

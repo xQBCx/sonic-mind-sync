@@ -69,12 +69,52 @@ export const ShareModal = ({
 
   const shareOptions = [
     {
-      name: "Twitter",
+      name: "X (Twitter)",
       icon: Twitter,
       color: "hover:bg-blue-500/10 hover:border-blue-500/30",
       action: () => {
         const tweetText = `${text}\n\n${url} #SonicBrief #AIAudio #ProductivityHack`;
-        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
+        window.open(`https://x.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, '_blank');
+      }
+    },
+    {
+      name: "Facebook",
+      icon: Share2,
+      color: "hover:bg-blue-600/10 hover:border-blue-600/30",
+      action: () => {
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+      }
+    },
+    {
+      name: "Instagram",
+      icon: Share2,
+      color: "hover:bg-pink-500/10 hover:border-pink-500/30",
+      action: () => {
+        navigator.clipboard.writeText(`${text}\n\n${url}`);
+        toast({
+          title: "Link copied!",
+          description: "Paste this in your Instagram story or bio.",
+        });
+      }
+    },
+    {
+      name: "TikTok",
+      icon: Share2,
+      color: "hover:bg-black/10 hover:border-black/30",
+      action: () => {
+        navigator.clipboard.writeText(`${text}\n\n${url}`);
+        toast({
+          title: "Link copied!",
+          description: "Share this on your TikTok profile or in comments.",
+        });
+      }
+    },
+    {
+      name: "Snapchat",
+      icon: Share2,
+      color: "hover:bg-yellow-500/10 hover:border-yellow-500/30",
+      action: () => {
+        window.open(`https://www.snapchat.com/scan?attachmentUrl=${encodeURIComponent(url)}`, '_blank');
       }
     },
     {
@@ -150,7 +190,7 @@ export const ShareModal = ({
           {/* Social Share Buttons */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Share On</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {shareOptions.map((option) => (
                 <Button
                   key={option.name}
