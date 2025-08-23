@@ -49,8 +49,11 @@ const VoiceInterface: React.FC = () => {
   };
 
   const handleConnectionChange = (connected: boolean) => {
+    console.log('Connection changed:', connected);
     setIsConnected(connected);
-    if (!connected) {
+    if (connected) {
+      setIsListening(true);
+    } else {
       setIsSpeaking(false);
       setIsListening(false);
     }
@@ -58,72 +61,81 @@ const VoiceInterface: React.FC = () => {
 
   const startConversation = async () => {
     try {
-      // First check if we have microphone permission
-      let permissionGranted = false;
+      console.log('Starting voice conversation...');
       
-      try {
-        // Request microphone permission first
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // Stop the stream immediately - we just needed to check permission
-        stream.getTracks().forEach(track => track.stop());
-        permissionGranted = true;
-      } catch (permissionError) {
-        console.error('Microphone permission error:', permissionError);
-        
-        let errorMessage = 'Microphone access denied';
-        if (permissionError instanceof Error) {
-          if (permissionError.name === 'NotAllowedError') {
-            errorMessage = 'Microphone permission denied. Please allow microphone access and try again.';
-          } else if (permissionError.name === 'NotFoundError') {
-            errorMessage = 'No microphone found. Please connect a microphone and try again.';
-          } else if (permissionError.name === 'NotSupportedError') {
-            errorMessage = 'Microphone not supported in this browser.';
-          } else {
-            errorMessage = `Microphone error: ${permissionError.message}`;
-          }
+      // Check secure context first
+      if (!window.isSecureContext) {
+        throw new Error('Microphone access requires HTTPS or localhost');
+      }
+      
+      // Check microphone availability
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Microphone not supported in this browser');
+      }
+      
+      // First request microphone permission explicitly
+      console.log('Requesting microphone permission...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          sampleRate: 24000,
+          channelCount: 1,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
         }
-        
-        toast({
-          title: "Microphone Access Required",
-          description: errorMessage,
-          variant: "destructive",
-        });
-        return;
-      }
+      });
       
-      if (!permissionGranted) {
-        toast({
-          title: "Microphone Access Required",
-          description: "Please allow microphone access to use voice features.",
-          variant: "destructive",
-        });
-        return;
-      }
+      // Test the stream briefly then stop it
+      console.log('Microphone permission granted, stream obtained');
+      stream.getTracks().forEach(track => track.stop());
       
       // Now start the realtime chat
+      console.log('Starting RealtimeChat...');
       chatRef.current = new RealtimeChat(handleMessage, handleConnectionChange);
       await chatRef.current.connect();
-      setIsListening(true);
       
+      console.log('Voice conversation started successfully');
       toast({
         title: "Voice Interface Active",
         description: "Start speaking! Tell me what you'd like to learn or how you're feeling.",
       });
     } catch (error) {
       console.error('Error starting conversation:', error);
+      
+      let errorMessage = 'Failed to connect to voice service';
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          errorMessage = 'Microphone permission denied. Please:\n1. Allow microphone access\n2. Refresh the page\n3. Try again';
+        } else if (error.name === 'NotFoundError') {
+          errorMessage = 'No microphone found. Please connect a microphone and try again.';
+        } else if (error.name === 'NotSupportedError') {
+          errorMessage = 'Microphone not supported. Try Chrome, Firefox, or Safari.';
+        } else if (error.name === 'SecurityError') {
+          errorMessage = 'Security error. Please use HTTPS or localhost.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
-        title: "Connection Error",
-        description: error instanceof Error ? error.message : 'Failed to connect to voice service',
+        title: "Voice Interface Error",
+        description: errorMessage,
         variant: "destructive",
       });
     }
   };
 
   const endConversation = () => {
+    console.log('Ending voice conversation...');
     chatRef.current?.disconnect();
     setIsListening(false);
     setIsSpeaking(false);
     setConversation([]);
+    
+    toast({
+      title: "Voice Interface Stopped",
+      description: "Conversation ended",
+    });
   };
 
   useEffect(() => {
