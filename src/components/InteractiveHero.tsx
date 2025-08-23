@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles, Mic } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { createBrief, saveBriefToHistory } from "@/lib/api";
@@ -178,6 +178,26 @@ export const InteractiveHero = () => {
                 "Generate My SonicBrief"
               )}
             </Button>
+
+            {/* Voice Interface Option */}
+            {user && (
+              <div className="text-center border-t pt-6 mt-6">
+                <p className="text-sm text-muted-foreground mb-3">
+                  Or try our voice interface
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/voice')}
+                  className="px-6 py-3"
+                >
+                  <Mic className="mr-2 h-4 w-4" />
+                  Talk to SonicBrief
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Just speak naturally about what you want to learn
+                </p>
+              </div>
+            )}
 
             {!user && (
               <p className="text-center text-sm text-muted-foreground">
