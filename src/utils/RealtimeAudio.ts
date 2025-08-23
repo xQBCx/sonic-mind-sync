@@ -234,7 +234,7 @@ export class RealtimeChat {
       }
 
       // Connect to WebSocket - Use proper Supabase project URL
-      const wsUrl = `wss://xjqshryywklqcdahnbtv.functions.supabase.co/realtime-chat`;
+      const wsUrl = `wss://ldcofddghsruqarlgagh.functions.supabase.co/realtime-chat`;
       
       // Add authorization header
       const headers: Record<string, string> = {

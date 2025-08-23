@@ -57,6 +57,7 @@ export function StimmyAvatar({
         src={isSpeaking || isListening ? stimmyAvatar : stimmyLight}
         alt="Stimmy - Your AI Learning Companion"
         className="w-full h-full object-contain"
+        style={{ background: 'transparent' }}
         onError={handleImageError}
       />
       

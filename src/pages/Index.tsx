@@ -23,7 +23,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-background">
-      <PromoVideoModal />
+      {!user && <PromoVideoModal />}
       <Header />
       {user ? (
         <>

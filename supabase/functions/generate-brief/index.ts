@@ -275,18 +275,41 @@ serve(async (req) => {
           .eq('brief_id', brief.id)
           .eq('segment_type', 'content');
 
-        // Generate mood-based background music URLs using existing sample
-        const backgroundMusicUrls = {
-          focus: '/sample.mp3', // Use existing sample file for now
-          energy: '/sample.mp3', // Use existing sample file for now
-          calm: '/sample.mp3' // Use existing sample file for now
-        };
+        // Generate actual background music
+        console.log('Generating background music...');
+        
+        let backgroundMusicUrl = '/sample.mp3'; // fallback
+        
+        try {
+          // Call music generation function
+          const musicResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/generate-music`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            },
+            body: JSON.stringify({
+              mood,
+              duration: Math.max(30, durationSec - 30) // Background music duration
+            }),
+          });
+          
+          if (musicResponse.ok) {
+            const musicData = await musicResponse.json();
+            backgroundMusicUrl = musicData.musicUrl;
+            console.log('Background music generated successfully');
+          } else {
+            console.log('Music generation failed, using fallback');
+          }
+        } catch (musicError) {
+          console.error('Music generation error:', musicError);
+        }
 
         // Update intro and outro segments with appropriate audio
         await supabase
           .from('audio_segments')
           .update({
-            audio_url: backgroundMusicUrls[mood],
+            audio_url: backgroundMusicUrl,
             status: 'ready'
           })
           .eq('brief_id', brief.id)
@@ -295,7 +318,7 @@ serve(async (req) => {
         await supabase
           .from('audio_segments')
           .update({
-            audio_url: backgroundMusicUrls[mood],
+            audio_url: backgroundMusicUrl,
             status: 'ready'
           })
           .eq('brief_id', brief.id)
@@ -308,7 +331,7 @@ serve(async (req) => {
             status: 'ready',
             script,
             audio_url: contentAudioUrl, // Main audio for fallback
-            background_music_url: backgroundMusicUrls[mood]
+            background_music_url: backgroundMusicUrl
           })
           .eq('id', brief.id);
           
