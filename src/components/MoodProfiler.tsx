@@ -50,24 +50,24 @@ export const MoodProfiler = () => {
             <h3 className="text-2xl font-semibold mb-6 text-foreground">
               Choose Your Learning Mood
             </h3>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:flex md:flex-wrap gap-3 md:gap-4">
               {moods.map((mood) => (
                 <button
                   key={mood.id}
                   onClick={() => setSelectedMood(mood.id)}
-                  className={`p-4 rounded-xl border-2 transition-all duration-300 text-left hover:shadow-glow ${
+                  className={`min-h-12 md:min-h-[3.25rem] px-4 py-3 text-sm md:text-base leading-tight whitespace-normal break-words text-center items-center justify-center rounded-xl border-2 transition-all duration-300 hover:shadow-glow ${
                     selectedMood === mood.id 
                       ? 'border-primary shadow-glow bg-primary/10' 
                       : 'border-border/20 hover:border-primary/30'
                   }`}
                 >
-                  <div className="flex items-center mb-3">
-                    <div className={`w-10 h-10 rounded-lg ${mood.color} flex items-center justify-center mr-3`}>
-                      <mood.icon className="w-5 h-5 text-primary-foreground" />
+                  <div className="flex flex-col items-center">
+                    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${mood.color} flex items-center justify-center mb-2`}>
+                      <mood.icon className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
                     </div>
-                    <span className="font-semibold text-foreground">{mood.name}</span>
+                    <span className="font-semibold text-foreground mb-1">{mood.name}</span>
+                    <p className="text-xs md:text-sm text-muted-foreground">{mood.description}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground">{mood.description}</p>
                 </button>
               ))}
             </div>
