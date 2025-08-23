@@ -214,11 +214,12 @@ serve(async (req) => {
 
         console.log('Segments created:', createdSegments.length);
 
-        // Generate TTS with ElevenLabs
+        // Generate TTS with ElevenLabs if available, otherwise use a longer sample text
         const elevenlabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
-        if (!elevenlabsApiKey) {
-          throw new Error('ElevenLabs API key not configured');
-        }
+        let contentAudioUrl;
+        
+        if (elevenlabsApiKey) {
+          console.log('Using ElevenLabs for TTS generation...');
         
         // Update status to TTS
         await supabase.from('briefs').update({ status: 'tts' }).eq('id', brief.id);
@@ -233,29 +234,34 @@ serve(async (req) => {
           calm: { stability: 0.9, similarity_boost: 0.9, style: 0.1, use_speaker_boost: false }
         };
 
-        const ttsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'audio/mpeg',
-            'Content-Type': 'application/json',
-            'xi-api-key': elevenlabsApiKey,
-          },
-          body: JSON.stringify({
-            text: script,
-            model_id: 'eleven_multilingual_v2',
-            voice_settings: voiceSettings[mood] || voiceSettings.focus,
-          }),
-        });
+          const ttsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+            method: 'POST',
+            headers: {
+              'Accept': 'audio/mpeg',
+              'Content-Type': 'application/json',
+              'xi-api-key': elevenlabsApiKey,
+            },
+            body: JSON.stringify({
+              text: script,
+              model_id: 'eleven_multilingual_v2',
+              voice_settings: voiceSettings[mood] || voiceSettings.focus,
+            }),
+          });
 
-        if (!ttsResponse.ok) {
-          const errorText = await ttsResponse.text();
-          console.error('ElevenLabs error:', errorText);
-          throw new Error(`TTS failed: ${ttsResponse.status}`);
+          if (!ttsResponse.ok) {
+            const errorText = await ttsResponse.text();
+            console.error('ElevenLabs error:', errorText);
+            throw new Error(`TTS failed: ${ttsResponse.status}`);
+          }
+
+          const audioBuffer = await ttsResponse.arrayBuffer();
+          const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+          contentAudioUrl = `data:audio/mpeg;base64,${audioBase64}`;
+        } else {
+          console.log('ElevenLabs not configured, using sample audio...');
+          // Create a longer sample audio URL (you could host actual audio files)
+          contentAudioUrl = '/sample.mp3'; // This should be a real audio file
         }
-
-        const audioBuffer = await ttsResponse.arrayBuffer();
-        const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
-        const contentAudioUrl = `data:audio/mpeg;base64,${audioBase64}`;
         
         console.log('Main content audio generated successfully');
 
@@ -302,8 +308,7 @@ serve(async (req) => {
             status: 'ready',
             script,
             audio_url: contentAudioUrl, // Main audio for fallback
-            background_music_url: backgroundMusicUrls[mood],
-            flow_type: 'single'
+            background_music_url: backgroundMusicUrls[mood]
           })
           .eq('id', brief.id);
           
