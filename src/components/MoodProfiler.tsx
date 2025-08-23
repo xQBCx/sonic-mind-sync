@@ -55,7 +55,7 @@ export const MoodProfiler = () => {
                 <button
                   key={mood.id}
                   onClick={() => setSelectedMood(mood.id)}
-                  className={`w-full min-h-[110px] rounded-xl border border-white/20 px-5 py-4 flex flex-col items-center justify-center text-center hover:border-white/40 transition ${
+                  className={`w-full min-h-[128px] md:min-h-[136px] px-5 py-4 rounded-xl border border-white/20 hover:border-white/40 transition flex flex-col items-center justify-center text-center gap-1 ${
                     selectedMood === mood.id 
                       ? 'border-primary shadow-glow bg-primary/10' 
                       : ''
@@ -64,8 +64,8 @@ export const MoodProfiler = () => {
                   <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${mood.color} flex items-center justify-center mb-2`}>
                     <mood.icon className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
                   </div>
-                  <span className="text-lg font-medium">{mood.name}</span>
-                  <span className="mt-1 block text-sm leading-snug whitespace-normal break-words max-w-[22ch]">{mood.description}</span>
+                  <span className="text-base md:text-lg font-semibold">{mood.name}</span>
+                  <span className="text-[13px] md:text-sm leading-snug text-white/80 whitespace-normal break-words [text-wrap:balance] max-w-[22ch] md:max-w-[24ch]">{mood.description}</span>
                 </button>
               ))}
             </div>

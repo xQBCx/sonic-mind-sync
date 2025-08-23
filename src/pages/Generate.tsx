@@ -91,7 +91,6 @@ export default function Generate() {
 
   return (
     <div className="min-h-screen bg-gradient-background">
-      <div className="text-white">Hello from Generate page</div>
       <Header />
       <div className="container mx-auto px-6 py-24">
         <div className="max-w-2xl mx-auto">
