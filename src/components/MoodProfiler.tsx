@@ -50,12 +50,12 @@ export const MoodProfiler = () => {
             <h3 className="text-2xl font-semibold mb-6 text-foreground">
               Choose Your Learning Mood
             </h3>
-            <div className="grid grid-cols-2 md:flex md:flex-wrap gap-3 md:gap-4">
+            <div className="grid sm:grid-cols-3 gap-4">
               {moods.map((mood) => (
                 <button
                   key={mood.id}
                   onClick={() => setSelectedMood(mood.id)}
-                  className={`min-h-12 md:min-h-[3.25rem] px-4 py-3 text-sm md:text-base leading-tight whitespace-normal break-words text-center items-center justify-center rounded-xl border-2 transition-all duration-300 hover:shadow-glow ${
+                  className={`min-h-[96px] md:min-h-[104px] w-full px-5 py-4 flex items-center justify-center text-center rounded-xl border-2 transition-all duration-300 hover:shadow-glow ${
                     selectedMood === mood.id 
                       ? 'border-primary shadow-glow bg-primary/10' 
                       : 'border-border/20 hover:border-primary/30'
@@ -65,7 +65,7 @@ export const MoodProfiler = () => {
                     <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${mood.color} flex items-center justify-center mb-2`}>
                       <mood.icon className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
                     </div>
-                    <span className="font-semibold text-foreground mb-1">{mood.name}</span>
+                    <span className="block text-base md:text-lg leading-tight md:leading-snug whitespace-normal break-words max-w-[20ch] font-semibold text-foreground mb-1">{mood.name}</span>
                     <p className="text-xs md:text-sm text-muted-foreground">{mood.description}</p>
                   </div>
                 </button>
