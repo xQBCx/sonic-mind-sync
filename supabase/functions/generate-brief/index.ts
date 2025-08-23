@@ -139,13 +139,17 @@ serve(async (req) => {
       // Generate TTS audio with ElevenLabs
       const voiceId = '9BWtsMINqrJLrRacOk9x'; // Aria voice
       const model = 'eleven_multilingual_v2';
+      const apiKey = Deno.env.get('ELEVENLABS_API_KEY');
+      
+      console.log('API Key present:', !!apiKey);
+      console.log('API Key prefix:', apiKey?.substring(0, 8));
       
       const ttsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
         method: 'POST',
         headers: {
           'Accept': 'audio/mpeg',
           'Content-Type': 'application/json',
-          'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY'),
+          'xi-api-key': apiKey,
         },
         body: JSON.stringify({
           text: script,
