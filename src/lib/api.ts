@@ -78,24 +78,13 @@ export async function createBrief(req: CreateBriefReq): Promise<{ briefId: strin
     return { briefId: id, status: 'queued' };
   }
 
-  // Call Supabase Edge Function
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('User not authenticated');
-
-  const res = await fetch('https://1dcofdghsrquarlgqahj.supabase.co/functions/v1/generate-brief', {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`
-    },
-    body: JSON.stringify({
-      mood: req.mood,
-      topics: req.topics,
-      durationSec: req.durationSec
-    }),
+  // invoke edge function; supabase client auto-attaches the user's JWT
+  const { data, error } = await supabase.functions.invoke("generate-brief", {
+    body: req,
   });
-  if (!res.ok) throw new Error(`createBrief failed: ${res.status}`);
-  return res.json();
+  if (error) throw error;
+  // data should be { briefId, status }
+  return data;
 }
 
 export async function getBrief(id: string): Promise<Brief> {
