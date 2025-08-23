@@ -32,18 +32,15 @@ export const UserProfileSetup = ({ onComplete, onSkip }: UserProfileSetupProps) 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      // Create or update user profile
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          age: profile.age ? parseInt(profile.age) : null,
-          origin: profile.origin || null,
-          interests: profile.interests || null,
-          language_preference: profile.language_preference || null,
-          learning_goals: profile.learning_goals || null,
-          updated_at: new Date().toISOString()
-        });
+      // Create or update user profile using raw SQL since types aren't updated yet
+      const { error } = await supabase.rpc('create_user_profile', {
+        p_user_id: user.id,
+        p_age: profile.age ? parseInt(profile.age) : null,
+        p_origin: profile.origin || null,
+        p_interests: profile.interests || null,
+        p_language_preference: profile.language_preference || null,
+        p_learning_goals: profile.learning_goals || null
+      });
 
       if (error) throw error;
 
