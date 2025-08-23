@@ -28,9 +28,6 @@ export function Header() {
           </Link>
           {user && (
             <>
-              <Link to="/generate" className="text-muted-foreground hover:text-foreground transition-colors">
-                Generate
-              </Link>
               <Link to="/history" className="text-muted-foreground hover:text-foreground transition-colors">
                 History
               </Link>

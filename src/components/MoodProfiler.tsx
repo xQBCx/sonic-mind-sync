@@ -111,7 +111,7 @@ export const MoodProfiler = () => {
 
           {/* Generate Button */}
           <div className="text-center">
-            <Link to="/generate">
+            <Link to="/">
               <Button 
                 variant="neural" 
                 size="lg" 

@@ -154,26 +154,85 @@ serve(async (req) => {
     // Start audio generation in background
     async function generateAudio() {
       try {
-        console.log('Starting background audio generation...');
+        console.log('Starting enhanced audio generation with music...');
         
-        // Generate script
-        const sampleScripts = {
-          focus: `Welcome to your focus session. Today we're exploring ${topics.join(', ')}. Let's dive deep into concentration and clarity, eliminating distractions and maximizing your cognitive potential.`,
-          energy: `Get ready to energize! Today's topics include ${topics.join(', ')}. Feel the motivation building as we explore dynamic concepts that will boost your energy and drive.`,
-          calm: `Take a deep breath and relax. We'll be gently exploring ${topics.join(', ')} in a soothing manner that promotes peace and tranquility.`
+        // Generate mood-based script
+        const moodScripts = {
+          focus: `Welcome to your enhanced focus session. Today we're diving deep into ${topics.join(', ')}. Let's eliminate distractions, sharpen your concentration, and unlock your cognitive potential. Take a deep breath as we begin this journey of focused learning.`,
+          energy: `Time to energize and ignite your passion! We're exploring ${topics.join(', ')} with dynamic energy and unstoppable momentum. Feel the excitement building as we dive into concepts that will fuel your drive and amplify your success. Let's transform learning into pure energy!`,
+          calm: `Welcome to your peaceful learning sanctuary. Today we'll gently explore ${topics.join(', ')} in a soothing, mindful way. Allow yourself to relax completely as we create a tranquil space for deep, meaningful understanding. Breathe deeply and let the knowledge flow naturally.`
         };
-        const script = sampleScripts[mood] || 'Welcome to your personalized briefing.';
         
-        // Update status to TTS
-        await supabase.from('briefs').update({ status: 'tts', script }).eq('id', brief.id);
+        const script = moodScripts[mood] || 'Welcome to your personalized SonicBrief experience.';
         
+        // Update status to generating
+        await supabase.from('briefs').update({ 
+          status: 'generating', 
+          script,
+          total_segments: 3 // intro music, content, outro
+        }).eq('id', brief.id);
+        
+        console.log('Creating multi-segment audio experience...');
+        
+        // Create audio segments for enhanced experience
+        const segments = [
+          {
+            brief_id: brief.id,
+            segment_type: 'intro_music',
+            sequence_order: 1,
+            script: 'Intro music for mood setting',
+            duration_sec: 15,
+            status: 'pending'
+          },
+          {
+            brief_id: brief.id,
+            segment_type: 'content',
+            sequence_order: 2,
+            script: script,
+            duration_sec: durationSec - 30, // Main content
+            status: 'pending'
+          },
+          {
+            brief_id: brief.id,
+            segment_type: 'outro',
+            sequence_order: 3,
+            script: 'Gentle conclusion with ambient sounds',
+            duration_sec: 15,
+            status: 'pending'
+          }
+        ];
+
+        // Insert segments
+        const { data: createdSegments, error: segmentError } = await supabase
+          .from('audio_segments')
+          .insert(segments)
+          .select();
+
+        if (segmentError) {
+          throw new Error(`Failed to create segments: ${segmentError.message}`);
+        }
+
+        console.log('Segments created:', createdSegments.length);
+
         // Generate TTS with ElevenLabs
         const elevenlabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
         if (!elevenlabsApiKey) {
           throw new Error('ElevenLabs API key not configured');
         }
         
+        // Update status to TTS
+        await supabase.from('briefs').update({ status: 'tts' }).eq('id', brief.id);
+        
+        // Generate main content audio
         const voiceId = '9BWtsMINqrJLrRacOk9x'; // Aria voice
+        
+        // Adjust voice settings based on mood
+        const voiceSettings = {
+          focus: { stability: 0.7, similarity_boost: 0.8, style: 0.3, use_speaker_boost: true },
+          energy: { stability: 0.4, similarity_boost: 0.6, style: 0.7, use_speaker_boost: true },
+          calm: { stability: 0.9, similarity_boost: 0.9, style: 0.1, use_speaker_boost: false }
+        };
+
         const ttsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
           method: 'POST',
           headers: {
@@ -184,10 +243,7 @@ serve(async (req) => {
           body: JSON.stringify({
             text: script,
             model_id: 'eleven_multilingual_v2',
-            voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.5,
-            },
+            voice_settings: voiceSettings[mood] || voiceSettings.focus,
           }),
         });
 
@@ -199,24 +255,62 @@ serve(async (req) => {
 
         const audioBuffer = await ttsResponse.arrayBuffer();
         const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
-        const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;
+        const contentAudioUrl = `data:audio/mpeg;base64,${audioBase64}`;
         
-        console.log('Audio generated successfully');
+        console.log('Main content audio generated successfully');
+
+        // Update content segment with audio
+        await supabase
+          .from('audio_segments')
+          .update({
+            audio_url: contentAudioUrl,
+            status: 'ready'
+          })
+          .eq('brief_id', brief.id)
+          .eq('segment_type', 'content');
+
+        // Generate mood-based background music URLs (placeholder - in real implementation, use music generation API)
+        const backgroundMusicUrls = {
+          focus: 'https://example.com/focus-ambient.mp3', // Would be generated/selected based on mood
+          energy: 'https://example.com/energy-beats.mp3',
+          calm: 'https://example.com/calm-nature.mp3'
+        };
+
+        // Update intro and outro segments with appropriate audio
+        await supabase
+          .from('audio_segments')
+          .update({
+            audio_url: backgroundMusicUrls[mood],
+            status: 'ready'
+          })
+          .eq('brief_id', brief.id)
+          .eq('segment_type', 'intro_music');
+
+        await supabase
+          .from('audio_segments')
+          .update({
+            audio_url: backgroundMusicUrls[mood],
+            status: 'ready'
+          })
+          .eq('brief_id', brief.id)
+          .eq('segment_type', 'outro');
         
-        // Update brief with ready status
+        // Update brief with ready status and background music
         await supabase
           .from('briefs')
           .update({
             status: 'ready',
             script,
-            audio_url: audioDataUrl,
+            audio_url: contentAudioUrl, // Main audio for fallback
+            background_music_url: backgroundMusicUrls[mood],
+            flow_type: 'single'
           })
           .eq('id', brief.id);
           
-        console.log('Brief completed successfully');
+        console.log('Enhanced brief with music completed successfully');
         
       } catch (error) {
-        console.error('Background audio generation failed:', error);
+        console.error('Enhanced audio generation failed:', error);
         await supabase
           .from('briefs')
           .update({ 

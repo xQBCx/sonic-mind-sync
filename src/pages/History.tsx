@@ -157,7 +157,7 @@ export default function History() {
                   <p className="text-muted-foreground mb-6">
                     Generate your first SonicBrief to see it here
                   </p>
-                  <Button onClick={() => navigate("/generate")}>
+                  <Button onClick={() => navigate("/")}>
                     Create Your First Brief
                   </Button>
                 </div>
