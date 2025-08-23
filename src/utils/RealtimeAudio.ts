@@ -9,6 +9,12 @@ export class AudioRecorder {
   async start() {
     try {
       console.log('Starting audio recorder...');
+      
+      // Check if we're in a secure context (required for getUserMedia)
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Microphone access not available. Please use HTTPS or localhost.');
+      }
+      
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           sampleRate: 24000,
@@ -22,6 +28,11 @@ export class AudioRecorder {
       this.audioContext = new AudioContext({
         sampleRate: 24000,
       });
+      
+      // Resume audio context if it's suspended
+      if (this.audioContext.state === 'suspended') {
+        await this.audioContext.resume();
+      }
       
       this.source = this.audioContext.createMediaStreamSource(this.stream);
       this.processor = this.audioContext.createScriptProcessor(4096, 1, 1);
@@ -37,6 +48,19 @@ export class AudioRecorder {
       console.log('Audio recorder started successfully');
     } catch (error) {
       console.error('Error accessing microphone:', error);
+      
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.name === 'NotAllowedError') {
+          throw new Error('Microphone permission denied. Please allow microphone access and refresh the page.');
+        } else if (error.name === 'NotFoundError') {
+          throw new Error('No microphone found. Please connect a microphone and try again.');
+        } else if (error.name === 'NotSupportedError') {
+          throw new Error('Microphone not supported in this browser. Try Chrome, Firefox, or Safari.');
+        } else if (error.name === 'OverconstrainedError') {
+          throw new Error('Microphone constraints not supported. Please try a different device.');
+        }
+      }
       throw error;
     }
   }

@@ -133,92 +133,92 @@ const VoiceInterface: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-2xl space-y-6">
-        {/* Main Voice Interface */}
-        <Card className="p-8 text-center bg-card/50 backdrop-blur-sm border-2">
-          <div className="space-y-6">
-            {/* Voice Indicator */}
-            <div className="flex justify-center">
-              <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-300 ${
-                isSpeaking 
-                  ? 'bg-accent animate-pulse scale-110' 
-                  : isListening 
-                    ? 'bg-primary animate-pulse' 
-                    : 'bg-muted'
-              }`}>
-                {isSpeaking ? (
-                  <Volume2 className="w-12 h-12 text-accent-foreground" />
-                ) : isListening ? (
-                  <Mic className="w-12 h-12 text-primary-foreground" />
-                ) : (
-                  <MicOff className="w-12 h-12 text-muted-foreground" />
-                )}
-              </div>
-            </div>
-
-            {/* Status Text */}
-            <div className="space-y-2">
-              <h1 className="text-2xl font-bold">SonicBrief Voice</h1>
-              <p className="text-muted-foreground">
-                {isSpeaking 
-                  ? 'AI is speaking...' 
-                  : isListening 
-                    ? 'Listening... speak naturally about what you want to learn or how you feel'
-                    : 'Press start to begin your voice conversation'
-                }
-              </p>
-            </div>
-
-            {/* Example Prompts */}
-            {!isConnected && (
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <p className="font-medium">Try saying something like:</p>
-                <div className="grid gap-2">
-                  <p className="p-2 bg-muted/50 rounded text-left">"I'm stressed about work and want to learn meditation with calming sounds"</p>
-                  <p className="p-2 bg-muted/50 rounded text-left">"I want to learn Python while listening to heavy metal beats"</p>
-                  <p className="p-2 bg-muted/50 rounded text-left">"What would Tony Robbins say about my business situation?"</p>
-                </div>
-              </div>
-            )}
-
-            {/* Control Button */}
-            <Button 
-              onClick={isConnected ? endConversation : startConversation}
-              size="lg"
-              className={`px-8 py-4 text-lg ${
-                isConnected 
-                  ? 'bg-destructive hover:bg-destructive/90' 
-                  : 'bg-primary hover:bg-primary/90'
-              }`}
-              disabled={false}
-            >
-              {isConnected ? 'End Conversation' : 'Start Voice Chat'}
-            </Button>
-          </div>
-        </Card>
-
-        {/* Conversation Log */}
-        {conversation.length > 0 && (
-          <Card className="p-4 bg-card/30 backdrop-blur-sm">
-            <h3 className="font-medium mb-3">Conversation:</h3>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {conversation.map((message, index) => (
-                <p 
-                  key={index} 
-                  className={`text-sm p-2 rounded ${
-                    message.startsWith('You: ') 
-                      ? 'bg-primary/10 text-primary-foreground/80 ml-4' 
-                      : 'bg-muted/50 mr-4'
-                  }`}
-                >
-                  {message}
-                </p>
-              ))}
-            </div>
-          </Card>
-        )}
+    <div className="space-y-6">
+      {/* Voice Indicator */}
+      <div className="flex justify-center">
+        <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${
+          isSpeaking 
+            ? 'bg-accent animate-pulse scale-110' 
+            : isListening 
+              ? 'bg-primary animate-pulse' 
+              : 'bg-muted'
+        }`}>
+          {isSpeaking ? (
+            <Volume2 className="w-8 h-8 text-accent-foreground" />
+          ) : isListening ? (
+            <Mic className="w-8 h-8 text-primary-foreground" />
+          ) : (
+            <MicOff className="w-8 h-8 text-muted-foreground" />
+          )}
+        </div>
       </div>
+
+      {/* Status Text */}
+      <div className="text-center space-y-2">
+        <p className="text-muted-foreground">
+          {isSpeaking 
+            ? 'AI is speaking...' 
+            : isListening 
+              ? 'Listening... speak naturally about what you want to learn or how you feel'
+              : 'Press start to begin your voice conversation'
+          }
+        </p>
+      </div>
+
+      {/* Example Prompts */}
+      {!isConnected && (
+        <div className="space-y-3 text-sm text-muted-foreground">
+          <p className="font-medium text-center">Try saying something like:</p>
+          <div className="grid gap-2">
+            <p className="p-3 bg-muted/50 rounded-lg text-left text-xs">
+              "I'm stressed about work and want to learn meditation with calming sounds"
+            </p>
+            <p className="p-3 bg-muted/50 rounded-lg text-left text-xs">
+              "I want to learn Python while listening to heavy metal beats"
+            </p>
+            <p className="p-3 bg-muted/50 rounded-lg text-left text-xs">
+              "What would Tony Robbins say about my business situation?"
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Control Button */}
+      <div className="text-center">
+        <Button 
+          onClick={isConnected ? endConversation : startConversation}
+          size="lg"
+          className={`px-8 py-3 ${
+            isConnected 
+              ? 'bg-destructive hover:bg-destructive/90' 
+              : 'bg-primary hover:bg-primary/90'
+          }`}
+          disabled={false}
+        >
+          {isConnected ? 'End Conversation' : 'Start Voice Chat'}
+        </Button>
+      </div>
+
+      {/* Conversation Log */}
+      {conversation.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="font-medium text-sm">Conversation:</h4>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {conversation.map((message, index) => (
+              <p 
+                key={index} 
+                className={`text-sm p-3 rounded-lg ${
+                  message.startsWith('You: ') 
+                    ? 'bg-primary/10 text-primary-foreground/80 ml-4' 
+                    : 'bg-muted/50 mr-4'
+                }`}
+              >
+                {message}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

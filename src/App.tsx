@@ -11,7 +11,6 @@ import Auth from "./pages/Auth";
 import Blog from "./pages/Blog";
 import Schedules from "./pages/Schedules";
 import NotFound from "./pages/NotFound";
-import VoiceInterface from "./components/VoiceInterface";
 
 const queryClient = new QueryClient();
 
@@ -24,7 +23,6 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
-          <Route path="/voice" element={<VoiceInterface />} />
           <Route path="/generate" element={<Generate />} />
           <Route path="/brief/:id" element={<Brief />} />
           <Route path="/history" element={<History />} />

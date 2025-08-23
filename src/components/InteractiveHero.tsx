@@ -5,11 +5,12 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
-import { Loader2, Sparkles, Mic } from "lucide-react";
+import { Loader2, Sparkles, Mic, MicOff, Volume2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { createBrief, saveBriefToHistory } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import VoiceInterface from "@/components/VoiceInterface";
 
 const moods = [
   { id: 'focus', name: 'Focus', description: 'Concentration and clarity', color: 'bg-blue-500/20 text-blue-300' },
@@ -24,6 +25,7 @@ export const InteractiveHero = () => {
   const [topicsInput, setTopicsInput] = useState("");
   const [duration, setDuration] = useState([120]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showVoiceInterface, setShowVoiceInterface] = useState(false);
 
   const topics = topicsInput.split(',').map(t => t.trim()).filter(t => t.length > 0);
 
@@ -180,14 +182,14 @@ export const InteractiveHero = () => {
             </Button>
 
             {/* Voice Interface Option */}
-            {user && (
+            {user && !showVoiceInterface && (
               <div className="text-center border-t pt-6 mt-6">
                 <p className="text-sm text-muted-foreground mb-3">
                   Or try our voice interface
                 </p>
                 <Button
                   variant="outline"
-                  onClick={() => navigate('/voice')}
+                  onClick={() => setShowVoiceInterface(true)}
                   className="px-6 py-3"
                 >
                   <Mic className="mr-2 h-4 w-4" />
@@ -212,6 +214,26 @@ export const InteractiveHero = () => {
             )}
           </div>
         </Card>
+
+        {/* Voice Interface Section */}
+        {user && showVoiceInterface && (
+          <div className="max-w-2xl mx-auto mt-6">
+            <Card className="p-6 bg-card/60 border-border/30 backdrop-blur-sm shadow-neural">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">Voice Interface</h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowVoiceInterface(false)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Close
+                </Button>
+              </div>
+              <VoiceInterface />
+            </Card>
+          </div>
+        )}
       </div>
     </section>
   );
