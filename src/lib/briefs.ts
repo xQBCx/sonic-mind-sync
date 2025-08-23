@@ -25,21 +25,41 @@ export async function createBrief(params: {
   if (error) throw error;
   const id = data.id as string;
 
-  // Mock mode: flip to ready after ~10s
-  // (keeps working demo without real backend pipeline)
-  window.setTimeout(async () => {
-    await supabase
-      .from("briefs")
-      .update({
-        status: "ready",
-        audio_url: "/sample.mp3",
-        script:
-          "This is a sample SonicBrief script generated in mock mode.",
-      })
-      .eq("id", id);
-  }, 10000);
+  // Start mock progression if in mock mode
+  if (import.meta.env.VITE_MOCK === '1') {
+    // fire-and-forget; no await so UI keeps moving
+    simulateBriefProgress(id);
+  }
 
   return { briefId: id };
+}
+
+// Mock-only status progression (runs in the background)
+export async function simulateBriefProgress(briefId: string) {
+  if (import.meta.env.VITE_MOCK !== '1') return;
+  const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+  const steps: Array<{status: string; delay: number}> = [
+    { status: 'summarizing', delay: 2000 },
+    { status: 'tts',         delay: 2000 },
+    { status: 'music',       delay: 1500 },
+    { status: 'mixing',      delay: 1500 },
+    { status: 'uploading',   delay: 1000 },
+  ];
+  for (const s of steps) {
+    await sleep(s.delay);
+    await supabase.from('briefs')
+      .update({ status: s.status as any, updated_at: new Date().toISOString() })
+      .eq('id', briefId);
+  }
+  // Finalize
+  await supabase.from('briefs')
+    .update({
+      status: 'ready' as any,
+      audio_url: '/sample.mp3',
+      script: 'Sample mock script for demo.',
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', briefId);
 }
 
 export async function listMyBriefs(limit = 10) {
