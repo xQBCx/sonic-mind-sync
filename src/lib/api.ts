@@ -1,125 +1,124 @@
-import { supabase } from '@/lib/supabase'
-import type { Database } from '@/lib/supabase'
+// src/lib/api.ts
+import { v4 as uuidv4 } from 'uuid';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://sonicbrief-api.example.com';
-const MOCK_MODE = import.meta.env.VITE_MOCK === '1' || !import.meta.env.VITE_API_URL;
+const isMock =
+  String(import.meta.env.VITE_MOCK ?? '1') === '1'  // default to on for safety
+  || String(import.meta.env.MODE ?? '') === 'development';
 
-export interface CreateBriefRequest {
-  mood: 'focus' | 'energy' | 'calm';
+type BriefStatus =
+  | 'queued' | 'summarizing' | 'tts' | 'music' | 'mixing' | 'uploading' | 'ready' | 'error';
+
+export type CreateBriefReq = {
+  mood: 'focus'|'energy'|'calm';
   topics: string[];
   durationSec: number;
-}
-
-export interface CreateBriefResponse {
-  briefId: string;
-  status: 'queued';
-}
-
-export interface GetBriefResponse {
-  status: 'queued' | 'summarizing' | 'tts' | 'music' | 'mixing' | 'uploading' | 'ready' | 'error';
+};
+export type Brief = {
+  id: string;
+  status: BriefStatus;
   audioUrl?: string;
   script?: string;
   mood: string;
   topics: string[];
   durationSec: number;
   error?: string;
+  createdAt?: number;
+};
+
+const LS_KEY = 'sb_mock_briefs_v1';
+function loadStore(): Record<string, Brief & { startAt?: number }> {
+  try { return JSON.parse(localStorage.getItem(LS_KEY) || '{}'); } catch { return {}; }
 }
-
-// Mock data for demo
-const mockBriefs: Record<string, GetBriefResponse & { createdAt: Date; startTime: number }> = {};
-
-const statusProgression = ['queued', 'summarizing', 'tts', 'music', 'mixing', 'uploading', 'ready'] as const;
-
-export async function createBrief(request: CreateBriefRequest): Promise<CreateBriefResponse> {
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    throw new Error('User must be authenticated')
-  }
-
-  const briefId = crypto.randomUUID();
-  
-  // Always use Supabase now
-  const { data, error } = await supabase
-    .from('briefs')
-    .insert({
-      id: briefId,
-      user_id: user.id,
-      mood: request.mood,
-      topics: request.topics,
-      duration_sec: request.durationSec,
-      status: 'queued'
-    })
-    .select()
-    .single()
-
-  if (error) {
-    console.error('Supabase error:', error)
-    // Fallback to mock mode if Supabase fails
-    mockBriefs[briefId] = {
-      status: 'queued',
-      mood: request.mood,
-      topics: request.topics,
-      durationSec: request.durationSec,
-      createdAt: new Date(),
-      startTime: Date.now()
-    };
-    
-    return { briefId, status: 'queued' };
-  }
-
-  return { briefId: data.id, status: 'queued' };
+function saveStore(store: Record<string, Brief & { startAt?: number }>) {
+  localStorage.setItem(LS_KEY, JSON.stringify(store));
 }
+function advance(b: Brief & { startAt?: number }): Brief {
+  // Simulate ~10s pipeline with stages
+  const TOTAL = 10000;
+  const STAGES: [BriefStatus, number][] = [
+    ['queued', 0],
+    ['summarizing', 2000],
+    ['tts', 4000],
+    ['music', 6000],
+    ['mixing', 8000],
+    ['uploading', 9000],
+    ['ready', TOTAL],
+  ];
+  const now = Date.now();
+  const start = b.startAt ?? now;
+  const elapsed = now - start;
+  let status: BriefStatus = 'queued';
+  for (const [s, t] of STAGES) if (elapsed >= t) status = s;
 
-export async function getBrief(id: string): Promise<GetBriefResponse> {
-  // Check if it's a mock brief first
-  if (mockBriefs[id]) {
-    const mockBrief = mockBriefs[id];
-    const elapsed = Date.now() - mockBrief.startTime;
-    const progressSteps = Math.floor(elapsed / 2000);
-    const currentStatusIndex = Math.min(progressSteps, statusProgression.length - 1);
-    const status = statusProgression[currentStatusIndex];
-
-    if (status === 'ready') {
-      return {
-        status: 'ready',
-        audioUrl: '/sample.mp3',
-        script: `This is your ${mockBrief.mood} brief on ${mockBrief.topics.join(', ')}. Here's what you need to know to optimize your cognitive performance today...`,
-        mood: mockBrief.mood,
-        topics: mockBrief.topics,
-        durationSec: mockBrief.durationSec
-      };
-    }
-
-    return {
-      status,
-      mood: mockBrief.mood,
-      topics: mockBrief.topics,
-      durationSec: mockBrief.durationSec
-    };
-  }
-
-  // Try Supabase first
-  const { data, error } = await supabase
-    .from('briefs')
-    .select('*')
-    .eq('id', id)
-    .single()
-
-  if (error) {
-    console.error('Supabase error:', error)
-    throw new Error('Brief not found')
-  }
-
-  return {
-    status: data.status,
-    audioUrl: data.audio_url || undefined,
-    script: data.script || undefined,
-    mood: data.mood,
-    topics: data.topics,
-    durationSec: data.duration_sec,
-    error: data.error_message || undefined
+  const next: Brief = {
+    ...b,
+    status,
+    audioUrl: status === 'ready' ? '/sample.mp3' : b.audioUrl,
+    script: b.script ?? (status === 'ready' ? 'This is a demo script for your SonicBrief.' : undefined),
   };
+  (next as any).startAt = start;
+  return next;
+}
+
+export async function createBrief(req: CreateBriefReq): Promise<{ briefId: string; status: BriefStatus }> {
+  if (isMock) {
+    const id = uuidv4();
+    const store = loadStore();
+    store[id] = {
+      id,
+      mood: req.mood,
+      topics: req.topics,
+      durationSec: req.durationSec,
+      status: 'queued',
+      createdAt: Date.now(),
+      startAt: Date.now(),
+    };
+    saveStore(store);
+    return { briefId: id, status: 'queued' };
+  }
+
+  // REAL API path (kept as-is; adjust base URL/env as your app already does)
+  const base = import.meta.env.VITE_API_URL;
+  const res = await fetch(`${base}/api/briefs`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) throw new Error(`createBrief failed: ${res.status}`);
+  return res.json();
+}
+
+export async function getBrief(id: string): Promise<Brief> {
+  if (isMock) {
+    const store = loadStore();
+    const found = store[id];
+    if (!found) throw new Error('Mock brief not found');
+    const advanced = advance(found);
+    store[id] = advanced as any;
+    saveStore(store);
+    return advanced;
+  }
+
+  // REAL API path, with graceful fallback to mock if it errors
+  try {
+    const base = import.meta.env.VITE_API_URL;
+    const res = await fetch(`${base}/api/briefs/${id}`);
+    if (!res.ok) throw new Error(`getBrief failed: ${res.status}`);
+    return res.json();
+  } catch (e) {
+    // Fallback: if VITE_MOCK=1 at build time, use mock progression
+    if (String(import.meta.env.VITE_MOCK ?? '') === '1') {
+      const store = loadStore();
+      const fallback: Brief = store[id] ? advance(store[id]) : {
+        id, mood: 'focus', topics: ['starter'], durationSec: 120,
+        status: 'ready', audioUrl: '/sample.mp3', script: 'Fallback mock script.',
+      };
+      store[id] = fallback as any;
+      saveStore(store);
+      return fallback;
+    }
+    throw e;
+  }
 }
 
 // History management (localStorage for MVP)
@@ -139,36 +138,10 @@ export async function saveBriefToHistory(brief: BriefHistoryItem) {
 }
 
 export async function getBriefHistory(): Promise<BriefHistoryItem[]> {
-  const { data: { user } } = await supabase.auth.getUser()
-  
-  if (!user) {
-    // Fallback to localStorage for unauthenticated users
-    try {
-      const stored = localStorage.getItem('sonicbrief_history');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
+  try {
+    const stored = localStorage.getItem('sonicbrief_history');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
   }
-
-  const { data, error } = await supabase
-    .from('briefs')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  if (error) {
-    console.error('Error fetching history:', error)
-    return []
-  }
-
-  return data.map(brief => ({
-    id: brief.id,
-    mood: brief.mood,
-    topics: brief.topics,
-    durationSec: brief.duration_sec,
-    createdAt: brief.created_at,
-    status: brief.status
-  }))
 }
