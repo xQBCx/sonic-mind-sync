@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { createBrief, saveBriefToHistory } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import VoiceInterface from "@/components/VoiceInterface";
+import { StimmyAvatar } from "@/components/StimmyAvatar";
 
 const moods = [
   { id: 'focus', name: 'Focus', description: 'Concentration and clarity', color: 'bg-blue-500/20 text-blue-300' },
@@ -94,10 +95,18 @@ export const InteractiveHero = () => {
 
         <Card className="max-w-2xl mx-auto p-8 bg-card/60 border-border/30 backdrop-blur-sm shadow-neural">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
-              <Sparkles className="w-6 h-6 text-primary" />
-              Create Your SonicBrief
-            </h2>
+            <div className="flex items-center justify-center gap-3 mb-4">
+              <StimmyAvatar size="md" />
+              <div>
+                <h2 className="text-2xl font-bold mb-1 flex items-center gap-2">
+                  <Sparkles className="w-6 h-6 text-primary" />
+                  Create Your SonicBrief
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Hi! I'm Stimmy, your AI learning companion
+                </p>
+              </div>
+            </div>
             <p className="text-muted-foreground">
               {user ? "Generate your personalized audio brief" : "Sign up to start creating"}
             </p>

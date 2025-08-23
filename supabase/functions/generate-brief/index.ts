@@ -275,11 +275,11 @@ serve(async (req) => {
           .eq('brief_id', brief.id)
           .eq('segment_type', 'content');
 
-        // Generate mood-based background music URLs (placeholder - in real implementation, use music generation API)
+        // Generate mood-based background music URLs using existing sample
         const backgroundMusicUrls = {
-          focus: 'https://example.com/focus-ambient.mp3', // Would be generated/selected based on mood
-          energy: 'https://example.com/energy-beats.mp3',
-          calm: 'https://example.com/calm-nature.mp3'
+          focus: '/sample.mp3', // Use existing sample file for now
+          energy: '/sample.mp3', // Use existing sample file for now
+          calm: '/sample.mp3' // Use existing sample file for now
         };
 
         // Update intro and outro segments with appropriate audio

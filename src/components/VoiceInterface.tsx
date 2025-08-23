@@ -5,6 +5,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { Mic, MicOff, Volume2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { StimmyAvatar } from '@/components/StimmyAvatar';
 
 const VoiceInterface: React.FC = () => {
   const { toast } = useToast();
@@ -146,33 +147,27 @@ const VoiceInterface: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Voice Indicator */}
+      {/* Stimmy Avatar Voice Indicator */}
       <div className="flex justify-center">
-        <div className={`w-24 h-24 rounded-full flex items-center justify-center transition-all duration-300 ${
-          isSpeaking 
-            ? 'bg-accent animate-pulse scale-110' 
-            : isListening 
-              ? 'bg-primary animate-pulse' 
-              : 'bg-muted'
-        }`}>
-          {isSpeaking ? (
-            <Volume2 className="w-8 h-8 text-accent-foreground" />
-          ) : isListening ? (
-            <Mic className="w-8 h-8 text-primary-foreground" />
-          ) : (
-            <MicOff className="w-8 h-8 text-muted-foreground" />
-          )}
-        </div>
+        <StimmyAvatar 
+          size="xl"
+          isSpeaking={isSpeaking}
+          isListening={isListening}
+          onClick={isConnected ? endConversation : startConversation}
+        />
       </div>
 
       {/* Status Text */}
       <div className="text-center space-y-2">
+        <h3 className="text-lg font-semibold text-foreground">
+          Talk to Stimmy
+        </h3>
         <p className="text-muted-foreground">
           {isSpeaking 
-            ? 'AI is speaking...' 
+            ? 'Stimmy is speaking...' 
             : isListening 
-              ? 'Listening... speak naturally about what you want to learn or how you feel'
-              : 'Press start to begin your voice conversation'
+              ? 'Listening... tell Stimmy what you want to learn or how you feel'
+              : 'Tap Stimmy to start your voice conversation'
           }
         </p>
       </div>
@@ -195,21 +190,18 @@ const VoiceInterface: React.FC = () => {
         </div>
       )}
 
-      {/* Control Button */}
-      <div className="text-center">
-        <Button 
-          onClick={isConnected ? endConversation : startConversation}
-          size="lg"
-          className={`px-8 py-3 ${
-            isConnected 
-              ? 'bg-destructive hover:bg-destructive/90' 
-              : 'bg-primary hover:bg-primary/90'
-          }`}
-          disabled={false}
-        >
-          {isConnected ? 'End Conversation' : 'Start Voice Chat'}
-        </Button>
-      </div>
+      {/* Control Button - Only show if not connected (since avatar is clickable) */}
+      {!isConnected && (
+        <div className="text-center">
+          <Button 
+            onClick={startConversation}
+            size="lg"
+            className="px-8 py-3 bg-primary hover:bg-primary/90"
+          >
+            Start Voice Chat
+          </Button>
+        </div>
+      )}
 
       {/* Conversation Log */}
       {conversation.length > 0 && (
