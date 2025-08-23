@@ -1,6 +1,6 @@
 // src/lib/api.ts
 import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/integrations/supabase/client';
 
 const isMock =
   String(import.meta.env.VITE_MOCK ?? '1') === '1'  // default to on for safety
@@ -78,11 +78,22 @@ export async function createBrief(req: CreateBriefReq): Promise<{ briefId: strin
     return { briefId: id, status: 'queued' };
   }
 
+  // Check authentication before making the request
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('User not authenticated. Please sign in to generate a brief.');
+  }
+
   // invoke edge function; supabase client auto-attaches the user's JWT
   const { data, error } = await supabase.functions.invoke("generate-brief", {
     body: req,
   });
-  if (error) throw error;
+  
+  if (error) {
+    console.error('Edge function error:', error);
+    throw new Error(`Failed to generate brief: ${error.message}`);
+  }
+  
   // data should be { briefId, status }
   return data;
 }
@@ -98,12 +109,41 @@ export async function getBrief(id: string): Promise<Brief> {
     return advanced;
   }
 
-  // REAL API path, with graceful fallback to mock if it errors
+  // Check authentication before making the request
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('User not authenticated. Please sign in to view briefs.');
+  }
+
+  // Query the brief from Supabase
   try {
-    const base = import.meta.env.VITE_API_URL;
-    const res = await fetch(`${base}/api/briefs/${id}`);
-    if (!res.ok) throw new Error(`getBrief failed: ${res.status}`);
-    return res.json();
+    const { data: brief, error } = await supabase
+      .from('briefs')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw new Error(`Failed to fetch brief: ${error.message}`);
+    }
+
+    if (!brief) {
+      throw new Error('Brief not found');
+    }
+
+    // Convert database format to API format
+    return {
+      id: brief.id,
+      status: brief.status as BriefStatus,
+      audioUrl: brief.audio_url || undefined,
+      script: brief.script || undefined,
+      mood: brief.mood,
+      topics: brief.topics,
+      durationSec: brief.duration_sec,
+      error: brief.error_message || undefined,
+      createdAt: new Date(brief.created_at).getTime(),
+    };
   } catch (e) {
     // Fallback: if VITE_MOCK=1 at build time, use mock progression
     if (String(import.meta.env.VITE_MOCK ?? '') === '1') {
