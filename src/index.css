@@ -105,4 +105,13 @@ All colors MUST be HSL. Orange/Purple gradient theme for neuromodulation-powered
   .animate-pulse-glow {
     animation: var(--animate-pulse-glow);
   }
+  
+  .animate-scroll {
+    animation: scroll 30s linear infinite;
+  }
+
+  @keyframes scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-100%); }
+  }
 }
