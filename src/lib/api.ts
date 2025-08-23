@@ -1,5 +1,6 @@
 // src/lib/api.ts
 import { v4 as uuidv4 } from 'uuid';
+import { supabase } from '@/lib/supabase';
 
 const isMock =
   String(import.meta.env.VITE_MOCK ?? '1') === '1'  // default to on for safety
@@ -77,12 +78,21 @@ export async function createBrief(req: CreateBriefReq): Promise<{ briefId: strin
     return { briefId: id, status: 'queued' };
   }
 
-  // REAL API path (kept as-is; adjust base URL/env as your app already does)
-  const base = import.meta.env.VITE_API_URL;
-  const res = await fetch(`${base}/api/briefs`, {
+  // Call Supabase Edge Function
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('User not authenticated');
+
+  const res = await fetch('https://1dcofdghsrquarlgqahj.supabase.co/functions/v1/generate-brief', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(req),
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({
+      mood: req.mood,
+      topics: req.topics,
+      durationSec: req.durationSec
+    }),
   });
   if (!res.ok) throw new Error(`createBrief failed: ${res.status}`);
   return res.json();
