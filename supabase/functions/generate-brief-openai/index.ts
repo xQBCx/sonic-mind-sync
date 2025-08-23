@@ -59,7 +59,18 @@ async function generateAudioOpenAI(briefId: string, mood: string, topics: string
     }
 
     const audioBuffer = await ttsResponse.arrayBuffer();
-    const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+    
+    // Convert ArrayBuffer to base64 efficiently to avoid stack overflow
+    const uint8Array = new Uint8Array(audioBuffer);
+    let binaryString = '';
+    const chunkSize = 8192; // Process in chunks to avoid stack overflow
+    
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, i + chunkSize);
+      binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    
+    const audioBase64 = btoa(binaryString);
     const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;
     
     console.log('Audio generated successfully with OpenAI TTS');
