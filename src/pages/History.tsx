@@ -3,26 +3,38 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { listMyBriefs } from "@/lib/briefs";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { ArrowLeft, Play, Clock } from "lucide-react";
+import { ArrowLeft, Play, Clock, Loader2 } from "lucide-react";
 import { Header } from "@/components/Header";
 
 type Brief = {
   id: string;
-  mood: "focus" | "energy" | "calm";
+  mood: string;
   topics: string[] | null;
   duration_sec: number | null;
-  status: "queued" | "summarizing" | "tts" | "music" | "mixing" | "uploading" | "ready" | "error";
+  status: string;
   created_at: string;
+  audio_url: string | null;
+  script: string | null;
+  error_message: string | null;
+  updated_at: string;
+  user_id: string;
 };
 
 export default function History() {
   const [briefs, setBriefs] = useState<Brief[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+
+  // Redirect to auth if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth?redirectTo=/history');
+    }
+  }, [user, authLoading, navigate]);
 
   useEffect(() => {
     const loadBriefs = async () => {
@@ -32,8 +44,17 @@ export default function History() {
       }
       
       try {
-        const data = await listMyBriefs();
-        setBriefs(data);
+        const { data, error: fetchError } = await supabase
+          .from('briefs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(20);
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        setBriefs(data || []);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -66,6 +87,15 @@ export default function History() {
     const minutes = Math.round(seconds / 60);
     return `${minutes}:00 min`;
   };
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!user) {
     return (

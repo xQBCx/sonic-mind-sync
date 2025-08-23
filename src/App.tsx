@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Generate from "./pages/Generate";
 import Brief from "./pages/Brief";
 import History from "./pages/History";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,6 +20,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/generate" element={<Generate />} />
           <Route path="/brief/:id" element={<Brief />} />
           <Route path="/history" element={<History />} />

@@ -1,12 +1,10 @@
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
-import { AuthModal } from '@/components/AuthModal'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 export function Header() {
-  const [authModalOpen, setAuthModalOpen] = useState(false)
   const { user, signOut } = useAuth()
+  const location = useLocation()
 
   const handleSignOut = async () => {
     await signOut()
@@ -43,7 +41,7 @@ export function Header() {
         <div className="flex items-center space-x-4">
           {user ? (
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground hidden sm:block">
                 {user.email}
               </span>
               <Button variant="outline" onClick={handleSignOut}>
@@ -51,14 +49,14 @@ export function Header() {
               </Button>
             </div>
           ) : (
-            <Button onClick={() => setAuthModalOpen(true)}>
-              Sign In
-            </Button>
+            <Link to={`/auth${location.pathname !== '/' ? `?redirectTo=${encodeURIComponent(location.pathname)}` : ''}`}>
+              <Button>
+                Sign In
+              </Button>
+            </Link>
           )}
         </div>
       </div>
-
-      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </header>
   )
 }

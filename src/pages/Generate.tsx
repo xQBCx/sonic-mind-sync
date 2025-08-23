@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -8,11 +8,10 @@ import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { createBrief, saveBriefToHistory } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { AuthModal } from "@/components/AuthModal";
 import { Header } from "@/components/Header";
 
 
@@ -24,7 +23,7 @@ const moods = [
 
 export default function Generate() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [selectedMood, setSelectedMood] = useState<'focus' | 'energy' | 'calm' | null>(null);
   const [topicsInput, setTopicsInput] = useState("");
   const [duration, setDuration] = useState([120]);
@@ -32,13 +31,19 @@ export default function Generate() {
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [isScheduleOpen, setIsScheduleOpen] = useState(false);
-  const [authModalOpen, setAuthModalOpen] = useState(false);
+
+  // Redirect to auth if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth?redirectTo=/generate');
+    }
+  }, [user, authLoading, navigate]);
 
   const topics = topicsInput.split(',').map(t => t.trim()).filter(t => t.length > 0);
 
   const handleGenerate = async () => {
     if (!user) {
-      setAuthModalOpen(true);
+      navigate('/auth?redirectTo=/generate');
       return;
     }
     
@@ -88,6 +93,15 @@ export default function Generate() {
       setIsGenerating(false);
     }
   };
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-background">
@@ -221,8 +235,6 @@ export default function Generate() {
           </Card>
         </div>
       </div>
-      
-      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </div>
   );
 }

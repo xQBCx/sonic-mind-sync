@@ -1,0 +1,56 @@
+{
+  "name": "SonicBrief - AI-Powered Neuroadaptive Audio",
+  "short_name": "SonicBrief",
+  "description": "Generate personalized audio briefings with AI-powered neuroadaptive audio for enhanced learning and focus",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#6366f1",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/placeholder.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/placeholder.svg",
+      "type": "image/svg+xml", 
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity", "health"],
+  "shortcuts": [
+    {
+      "name": "Generate Brief",
+      "short_name": "Generate",
+      "description": "Create a new personalized audio brief",
+      "url": "/generate",
+      "icons": [
+        {
+          "src": "/placeholder.svg",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Brief History",
+      "short_name": "History",
+      "description": "View your generated briefs",
+      "url": "/history",
+      "icons": [
+        {
+          "src": "/placeholder.svg",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+}

@@ -1,24 +1,40 @@
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import { supabase } from "@/lib/supabase";
+import { useParams, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { AudioPlayer } from "@/components/AudioPlayer";
+import { useAuth } from "@/hooks/useAuth";
+import { Header } from "@/components/Header";
+import { Loader2 } from "lucide-react";
 
 type Brief = {
   id: string;
-  mood: "focus" | "energy" | "calm";
+  mood: string;
   topics: string[] | null;
   duration_sec: number | null;
-  status: "queued" | "summarizing" | "tts" | "music" | "mixing" | "uploading" | "ready" | "error";
+  status: string;
   audio_url: string | null;
   script: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+  user_id: string;
 };
 
 export default function BriefPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
   const [brief, setBrief] = useState<Brief | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+
+  // Redirect to auth if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth?redirectTo=' + encodeURIComponent(`/brief/${id}`));
+    }
+  }, [user, authLoading, navigate, id]);
 
   const moodColor = useMemo(() => {
     switch (brief?.mood) {
@@ -49,14 +65,42 @@ export default function BriefPage() {
     }
     fetchBrief();
     return () => { if (timer) window.clearTimeout(timer); };
-  }, [id]);
+  }, [id, user]);
 
-  if (loading) return <div className="p-6 opacity-80">Loading brief…</div>;
-  if (err) return <div className="p-6 text-red-300">Error: {err}</div>;
-  if (!brief) return <div className="p-6">Brief not found.</div>;
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-background flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (loading) return (
+    <div className="min-h-screen bg-gradient-background">
+      <Header />
+      <div className="p-6 opacity-80">Loading brief…</div>
+    </div>
+  );
+  
+  if (err) return (
+    <div className="min-h-screen bg-gradient-background">
+      <Header />
+      <div className="p-6 text-red-300">Error: {err}</div>
+    </div>
+  );
+  
+  if (!brief) return (
+    <div className="min-h-screen bg-gradient-background">
+      <Header />
+      <div className="p-6">Brief not found.</div>
+    </div>
+  );
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-background">
+      <Header />
+      <div className="p-6 space-y-6">
       <div className="flex items-center gap-3">
         <Badge className={moodColor}>{brief.mood}</Badge>
         <span className="opacity-70">{brief.duration_sec ? `${Math.round(brief.duration_sec/60)} min` : ""}</span>
@@ -90,6 +134,7 @@ export default function BriefPage() {
           <p className="mt-3 whitespace-pre-wrap opacity-90">{brief.script}</p>
         </details>
       ) : null}
+      </div>
     </div>
   );
 }
