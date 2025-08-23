@@ -21,9 +21,12 @@ serve(async (req) => {
 
   try {
     console.log('Generate brief function called');
+    console.log('Request method:', req.method);
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()));
     
     // Get the authorization header
     const authHeader = req.headers.get('Authorization');
+    console.log('Authorization header present:', !!authHeader);
     if (!authHeader) {
       console.error('No authorization header found');
       return new Response(JSON.stringify({ error: 'No authorization header' }), {
@@ -74,7 +77,19 @@ serve(async (req) => {
     console.log('User authenticated:', user.id);
 
     // Parse request body
-    const { mood, topics, durationSec }: GenerateBriefRequest = await req.json();
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('Raw request body:', requestBody);
+    } catch (parseError) {
+      console.error('Failed to parse request body:', parseError);
+      return new Response(JSON.stringify({ error: 'Invalid JSON in request body' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    
+    const { mood, topics, durationSec }: GenerateBriefRequest = requestBody;
     console.log('Request params:', { mood, topics, durationSec });
 
     // Validate input
@@ -93,6 +108,14 @@ serve(async (req) => {
     }
 
     // Create brief record in database
+    console.log('About to insert brief with data:', {
+      user_id: user.id,
+      mood,
+      topics,
+      duration_sec: durationSec,
+      status: 'queued',
+    });
+    
     const { data: brief, error: insertError } = await supabaseUser
       .from('briefs')
       .insert({
@@ -107,7 +130,8 @@ serve(async (req) => {
 
     if (insertError) {
       console.error('Failed to insert brief:', insertError);
-      return new Response(JSON.stringify({ error: 'Failed to create brief' }), {
+      console.error('Insert error details:', JSON.stringify(insertError, null, 2));
+      return new Response(JSON.stringify({ error: 'Failed to create brief', details: insertError }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
