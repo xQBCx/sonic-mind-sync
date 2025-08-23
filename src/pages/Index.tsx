@@ -2,6 +2,7 @@ import { Hero } from "@/components/Hero";
 import { HowItWorks } from "@/components/HowItWorks";
 import { MoodProfiler } from "@/components/MoodProfiler";
 import { Header } from "@/components/Header";
+import { playPreview } from "@/utils/previewTone";
 
 const Index = () => {
   return (
@@ -10,6 +11,7 @@ const Index = () => {
       <Hero />
       <HowItWorks />
       <MoodProfiler />
+      <button onClick={playPreview}>Play Preview</button>
     </div>
   );
 };
