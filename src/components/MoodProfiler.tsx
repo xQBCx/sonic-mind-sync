@@ -50,24 +50,22 @@ export const MoodProfiler = () => {
             <h3 className="text-2xl font-semibold mb-6 text-foreground">
               Choose Your Learning Mood
             </h3>
-            <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {moods.map((mood) => (
                 <button
                   key={mood.id}
                   onClick={() => setSelectedMood(mood.id)}
-                  className={`min-h-[96px] md:min-h-[104px] w-full px-5 py-4 flex items-center justify-center text-center rounded-xl border-2 transition-all duration-300 hover:shadow-glow ${
+                  className={`w-full min-h-[110px] rounded-xl border border-white/20 px-5 py-4 flex flex-col items-center justify-center text-center hover:border-white/40 transition ${
                     selectedMood === mood.id 
                       ? 'border-primary shadow-glow bg-primary/10' 
-                      : 'border-border/20 hover:border-primary/30'
+                      : ''
                   }`}
                 >
-                  <div className="flex flex-col items-center">
-                    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${mood.color} flex items-center justify-center mb-2`}>
-                      <mood.icon className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
-                    </div>
-                    <span className="block text-base md:text-lg leading-tight md:leading-snug whitespace-normal break-words max-w-[20ch] font-semibold text-foreground mb-1">{mood.name}</span>
-                    <p className="text-xs md:text-sm text-muted-foreground">{mood.description}</p>
+                  <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${mood.color} flex items-center justify-center mb-2`}>
+                    <mood.icon className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
                   </div>
+                  <span className="text-lg font-medium">{mood.name}</span>
+                  <span className="mt-1 block text-sm leading-snug whitespace-normal break-words max-w-[22ch]">{mood.description}</span>
                 </button>
               ))}
             </div>
