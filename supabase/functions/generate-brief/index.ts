@@ -150,12 +150,90 @@ serve(async (req) => {
 
     console.log('Brief created successfully:', brief.id);
 
-    // For now, just return success without generating audio
+    // Start audio generation in background
+    async function generateAudio() {
+      try {
+        console.log('Starting background audio generation...');
+        
+        // Generate script
+        const sampleScripts = {
+          focus: `Welcome to your focus session. Today we're exploring ${topics.join(', ')}. Let's dive deep into concentration and clarity, eliminating distractions and maximizing your cognitive potential.`,
+          energy: `Get ready to energize! Today's topics include ${topics.join(', ')}. Feel the motivation building as we explore dynamic concepts that will boost your energy and drive.`,
+          calm: `Take a deep breath and relax. We'll be gently exploring ${topics.join(', ')} in a soothing manner that promotes peace and tranquility.`
+        };
+        const script = sampleScripts[mood] || 'Welcome to your personalized briefing.';
+        
+        // Update status to TTS
+        await supabase.from('briefs').update({ status: 'tts', script }).eq('id', brief.id);
+        
+        // Generate TTS with ElevenLabs
+        const elevenlabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
+        if (!elevenlabsApiKey) {
+          throw new Error('ElevenLabs API key not configured');
+        }
+        
+        const voiceId = '9BWtsMINqrJLrRacOk9x'; // Aria voice
+        const ttsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'audio/mpeg',
+            'Content-Type': 'application/json',
+            'xi-api-key': elevenlabsApiKey,
+          },
+          body: JSON.stringify({
+            text: script,
+            model_id: 'eleven_multilingual_v2',
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.5,
+            },
+          }),
+        });
+
+        if (!ttsResponse.ok) {
+          const errorText = await ttsResponse.text();
+          console.error('ElevenLabs error:', errorText);
+          throw new Error(`TTS failed: ${ttsResponse.status}`);
+        }
+
+        const audioBuffer = await ttsResponse.arrayBuffer();
+        const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+        const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;
+        
+        console.log('Audio generated successfully');
+        
+        // Update brief with ready status
+        await supabase
+          .from('briefs')
+          .update({
+            status: 'ready',
+            script,
+            audio_url: audioDataUrl,
+          })
+          .eq('id', brief.id);
+          
+        console.log('Brief completed successfully');
+        
+      } catch (error) {
+        console.error('Background audio generation failed:', error);
+        await supabase
+          .from('briefs')
+          .update({ 
+            status: 'error', 
+            error_message: error.message 
+          })
+          .eq('id', brief.id);
+      }
+    }
+    
+    // Start background task
+    EdgeRuntime.waitUntil(generateAudio());
+
+    // Return immediate response
     console.log('=== FUNCTION SUCCESS ===');
     return new Response(JSON.stringify({ 
       briefId: brief.id, 
-      status: 'queued',
-      message: 'Brief created successfully (audio generation disabled for testing)'
+      status: 'queued'
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
