@@ -6,6 +6,7 @@ import { RealtimeChat } from '@/utils/RealtimeAudio';
 import { Mic, MicOff, Volume2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { StimmyAvatar } from '@/components/StimmyAvatar';
+import { VoiceSelector } from '@/components/VoiceSelector';
 
 const VoiceInterface: React.FC = () => {
   const { toast } = useToast();
@@ -14,6 +15,7 @@ const VoiceInterface: React.FC = () => {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [conversation, setConversation] = useState<string[]>([]);
+  const [selectedVoice, setSelectedVoice] = useState('alloy');
   const chatRef = useRef<RealtimeChat | null>(null);
 
   const handleMessage = (event: any) => {
@@ -92,7 +94,7 @@ const VoiceInterface: React.FC = () => {
       
       // Now start the realtime chat
       console.log('Starting RealtimeChat...');
-      chatRef.current = new RealtimeChat(handleMessage, handleConnectionChange);
+      chatRef.current = new RealtimeChat(handleMessage, handleConnectionChange, selectedVoice);
       await chatRef.current.connect();
       
       console.log('Voice conversation started successfully');
@@ -171,6 +173,17 @@ const VoiceInterface: React.FC = () => {
           }
         </p>
       </div>
+
+      {/* Voice Selection */}
+      {!isConnected && (
+        <div className="max-w-sm mx-auto">
+          <VoiceSelector 
+            selectedVoice={selectedVoice}
+            onVoiceChange={setSelectedVoice}
+            disabled={isConnected}
+          />
+        </div>
+      )}
 
       {/* Example Prompts */}
       {!isConnected && (

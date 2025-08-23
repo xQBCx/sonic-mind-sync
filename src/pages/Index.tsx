@@ -6,6 +6,7 @@ import { InteractiveHero } from "@/components/InteractiveHero";
 import { ViralWaitlist } from "@/components/ViralWaitlist";
 import { SocialProof } from "@/components/SocialProof";
 import { ReferralTracker } from "@/components/ReferralTracker";
+import { PromoVideoModal } from "@/components/PromoVideoModal";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
@@ -22,6 +23,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-gradient-background">
+      <PromoVideoModal />
       <Header />
       {user ? (
         <>

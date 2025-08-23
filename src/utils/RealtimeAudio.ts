@@ -213,7 +213,8 @@ export class RealtimeChat {
 
   constructor(
     private onMessage: (message: any) => void,
-    private onConnectionChange: (connected: boolean) => void
+    private onConnectionChange: (connected: boolean) => void,
+    private voice: string = 'alloy'
   ) {}
 
   async connect() {
@@ -233,7 +234,7 @@ export class RealtimeChat {
       }
 
       // Connect to WebSocket - Use proper Supabase project URL
-      const wsUrl = `wss://xjqshryywklqcdahnbtv.functions.supabase.co/functions/v1/realtime-chat`;
+      const wsUrl = `wss://xjqshryywklqcdahnbtv.functions.supabase.co/realtime-chat`;
       
       // Add authorization header
       const headers: Record<string, string> = {

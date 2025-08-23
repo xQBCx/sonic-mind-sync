@@ -28,6 +28,9 @@ export function Header() {
           <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors">
             Home
           </Link>
+          <Link to="/blog" className="text-muted-foreground hover:text-foreground transition-colors">
+            News
+          </Link>
           {user && (
             <>
               <Link to="/history" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -38,9 +41,6 @@ export function Header() {
               </Link>
             </>
           )}
-          <Link to="/blog" className="text-muted-foreground hover:text-foreground transition-colors">
-            News
-          </Link>
         </nav>
 
         <div className="flex items-center space-x-4">
@@ -86,6 +86,13 @@ export function Header() {
             >
               Home
             </Link>
+            <Link 
+              to="/blog" 
+              className="block text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              News
+            </Link>
             {user && (
               <>
                 <Link 
@@ -104,13 +111,6 @@ export function Header() {
                 </Link>
               </>
             )}
-            <Link 
-              to="/blog" 
-              className="block text-muted-foreground hover:text-foreground transition-colors"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              News
-            </Link>
             
             <div className="pt-4 border-t border-border">
               {user ? (

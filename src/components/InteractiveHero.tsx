@@ -202,7 +202,7 @@ export const InteractiveHero = () => {
                   className="px-6 py-3"
                 >
                   <Mic className="mr-2 h-4 w-4" />
-                  Talk to SonicBrief
+                  Talk to Stimmy
                 </Button>
                 <p className="text-xs text-muted-foreground mt-2">
                   Just speak naturally about what you want to learn
