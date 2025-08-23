@@ -208,16 +208,30 @@ export class RealtimeChat {
         throw new Error('Not authenticated');
       }
 
-      // Connect to WebSocket
+      // Connect to WebSocket - Use proper Supabase project URL
       const wsUrl = `wss://ldcofddghsruqarlgagh.functions.supabase.co/realtime-chat`;
+      
+      // Add authorization header
+      const headers: Record<string, string> = {
+        'Authorization': `Bearer ${session.access_token}`,
+      };
+      
+      // For some browsers, we need to handle auth differently for WebSocket
       this.ws = new WebSocket(wsUrl);
-
+      
+      // Set up authentication after connection
       this.ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('WebSocket connected, sending auth...');
+        // Send auth message
+        this.ws?.send(JSON.stringify({
+          type: 'auth',
+          token: session.access_token
+        }));
         this.isConnected = true;
         this.onConnectionChange(true);
         this.startRecording();
       };
+
 
       this.ws.onmessage = async (event) => {
         try {
@@ -283,6 +297,11 @@ export class RealtimeChat {
       console.log('Recording started');
     } catch (error) {
       console.error('Error starting recording:', error);
+      // Notify parent component about recording error
+      this.onMessage({ 
+        type: 'error', 
+        message: `Recording failed: ${error instanceof Error ? error.message : 'Unknown error'}` 
+      });
     }
   }
 

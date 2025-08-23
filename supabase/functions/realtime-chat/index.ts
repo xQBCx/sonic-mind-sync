@@ -36,25 +36,6 @@ serve(async (req) => {
       });
     }
 
-    // Initialize Supabase client
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: { Authorization: req.headers.get('Authorization')! },
-      },
-    });
-
-    // Verify user authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      console.error('Authentication failed:', authError);
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.log('User authenticated:', user.id);
-
     // Upgrade to WebSocket
     const upgrade = req.headers.get('upgrade') || '';
     if (upgrade.toLowerCase() !== 'websocket') {
@@ -65,6 +46,8 @@ serve(async (req) => {
     
     let openaiWs: WebSocket | null = null;
     let sessionCreated = false;
+    let authenticated = false;
+    let supabase: any = null;
 
     // Function to create audio brief from conversation
     const createAudioBrief = async (briefRequest: any) => {
@@ -91,31 +74,65 @@ serve(async (req) => {
 
     socket.onopen = () => {
       console.log('Client WebSocket connected');
-      
-      // Connect to OpenAI Realtime API
-      const openaiUrl = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17';
-      openaiWs = new WebSocket(openaiUrl, ['realtime', `Bearer ${openaiKey}`]);
-      
-      openaiWs.onopen = () => {
-        console.log('Connected to OpenAI Realtime API');
-      };
+    };
 
-      openaiWs.onmessage = async (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('OpenAI message type:', data.type);
+    socket.onmessage = async (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('Received from client:', data.type);
+        
+        // Handle authentication
+        if (data.type === 'auth') {
+          console.log('Authenticating client...');
           
-          // Handle session creation
-          if (data.type === 'session.created' && !sessionCreated) {
-            console.log('Session created, sending session update...');
-            sessionCreated = true;
-            
-            // Send session configuration
-            const sessionUpdate = {
-              type: 'session.update',
-              session: {
-                modalities: ['text', 'audio'],
-                instructions: `You are SonicBrief, an AI audio content creator. Your job is to understand what the user wants and create personalized audio experiences for them.
+          // Initialize Supabase with the provided token
+          supabase = createClient(supabaseUrl, supabaseAnonKey, {
+            global: {
+              headers: { Authorization: `Bearer ${data.token}` },
+            },
+          });
+
+          // Verify user authentication
+          const { data: { user }, error: authError } = await supabase.auth.getUser();
+          if (authError || !user) {
+            console.error('Authentication failed:', authError);
+            socket.send(JSON.stringify({ 
+              type: 'error', 
+              message: 'Authentication failed' 
+            }));
+            socket.close();
+            return;
+          }
+
+          console.log('User authenticated:', user.id);
+          authenticated = true;
+          
+          // Now connect to OpenAI
+          const openaiUrl = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17';
+          openaiWs = new WebSocket(openaiUrl, ['realtime', `Bearer ${openaiKey}`]);
+          
+          openaiWs.onopen = () => {
+            console.log('Connected to OpenAI Realtime API');
+            socket.send(JSON.stringify({ type: 'connected' }));
+          };
+
+          openaiWs.onmessage = async (event) => {
+            // ... rest of OpenAI message handling
+            try {
+              const data = JSON.parse(event.data);
+              console.log('OpenAI message type:', data.type);
+              
+              // Handle session creation
+              if (data.type === 'session.created' && !sessionCreated) {
+                console.log('Session created, sending session update...');
+                sessionCreated = true;
+                
+                // Send session configuration
+                const sessionUpdate = {
+                  type: 'session.update',
+                  session: {
+                    modalities: ['text', 'audio'],
+                    instructions: `You are SonicBrief, an AI audio content creator. Your job is to understand what the user wants and create personalized audio experiences for them.
 
 IMPORTANT: When a user describes what they want (learning topics, mood, music style, emotional state), you should:
 
@@ -136,133 +153,139 @@ Examples of user requests:
 - "What would Tony Robbins say about my business situation? I need to calm down"
 
 Your goal is to create the perfect audio experience for their current state and needs.`,
-                voice: 'alloy',
-                input_audio_format: 'pcm16',
-                output_audio_format: 'pcm16',
-                input_audio_transcription: {
-                  model: 'whisper-1'
-                },
-                turn_detection: {
-                  type: 'server_vad',
-                  threshold: 0.5,
-                  prefix_padding_ms: 300,
-                  silence_duration_ms: 1000
-                },
-                tools: [
-                  {
-                    type: 'function',
-                    name: 'create_audio_brief',
-                    description: 'Create a personalized audio brief based on user preferences, mood, and learning goals',
-                    parameters: {
-                      type: 'object',
-                      properties: {
-                        topics: {
-                          type: 'array',
-                          items: { type: 'string' },
-                          description: 'Topics the user wants to learn about'
-                        },
-                        mood: {
-                          type: 'string',
-                          description: 'The mood/tone for the content (energetic, calming, motivational, etc.)'
-                        },
-                        duration_sec: {
-                          type: 'integer',
-                          description: 'Duration in seconds (default 300 for 5 minutes)'
-                        },
-                        music_style: {
-                          type: 'string',
-                          description: 'Preferred music or audio style (heavy metal, dubstep, nature sounds, calming, etc.)'
-                        },
-                        emotional_state: {
-                          type: 'string',
-                          description: 'User\'s current emotional state (stressed, excited, sad, motivated, etc.)'
-                        },
-                        specific_request: {
-                          type: 'string',
-                          description: 'Any specific requests like "Tony Robbins advice" or "motivation for running"'
+                    voice: 'alloy',
+                    input_audio_format: 'pcm16',
+                    output_audio_format: 'pcm16',
+                    input_audio_transcription: {
+                      model: 'whisper-1'
+                    },
+                    turn_detection: {
+                      type: 'server_vad',
+                      threshold: 0.5,
+                      prefix_padding_ms: 300,
+                      silence_duration_ms: 1000
+                    },
+                    tools: [
+                      {
+                        type: 'function',
+                        name: 'create_audio_brief',
+                        description: 'Create a personalized audio brief based on user preferences, mood, and learning goals',
+                        parameters: {
+                          type: 'object',
+                          properties: {
+                            topics: {
+                              type: 'array',
+                              items: { type: 'string' },
+                              description: 'Topics the user wants to learn about'
+                            },
+                            mood: {
+                              type: 'string',
+                              description: 'The mood/tone for the content (energetic, calming, motivational, etc.)'
+                            },
+                            duration_sec: {
+                              type: 'integer',
+                              description: 'Duration in seconds (default 300 for 5 minutes)'
+                            },
+                            music_style: {
+                              type: 'string',
+                              description: 'Preferred music or audio style (heavy metal, dubstep, nature sounds, calming, etc.)'
+                            },
+                            emotional_state: {
+                              type: 'string',
+                              description: 'User\'s current emotional state (stressed, excited, sad, motivated, etc.)'
+                            },
+                            specific_request: {
+                              type: 'string',
+                              description: 'Any specific requests like "Tony Robbins advice" or "motivation for running"'
+                            }
+                          },
+                          required: ['topics', 'mood']
                         }
-                      },
-                      required: ['topics', 'mood']
-                    }
-                  }
-                ],
-                tool_choice: 'auto',
-                temperature: 0.8,
-                max_response_output_tokens: 'inf'
-              }
-            };
-            
-            openaiWs?.send(JSON.stringify(sessionUpdate));
-          }
-          
-          // Handle function calls
-          if (data.type === 'response.function_call_arguments.done') {
-            console.log('Function call completed:', data);
-            
-            if (data.name === 'create_audio_brief') {
-              try {
-                const args = JSON.parse(data.arguments);
-                console.log('Creating audio brief with args:', args);
-                
-                // Transform the arguments to match our API
-                const briefRequest = {
-                  topics: args.topics || [],
-                  mood: args.mood || 'informative',
-                  durationSec: args.duration_sec || 300
-                };
-                
-                // Create the audio brief
-                const result = await createAudioBrief(briefRequest);
-                
-                // Send result back to OpenAI
-                const responseEvent = {
-                  type: 'conversation.item.create',
-                  item: {
-                    type: 'function_call_output',
-                    call_id: data.call_id,
-                    output: JSON.stringify(result)
+                      }
+                    ],
+                    tool_choice: 'auto',
+                    temperature: 0.8,
+                    max_response_output_tokens: 'inf'
                   }
                 };
                 
-                openaiWs?.send(JSON.stringify(responseEvent));
-                openaiWs?.send(JSON.stringify({ type: 'response.create' }));
-                
-                // Also send to client for UI updates
-                socket.send(JSON.stringify({
-                  type: 'brief_created',
-                  data: result
-                }));
-                
-              } catch (error) {
-                console.error('Error processing function call:', error);
+                openaiWs?.send(JSON.stringify(sessionUpdate));
               }
+              
+              // Handle function calls
+              if (data.type === 'response.function_call_arguments.done') {
+                console.log('Function call completed:', data);
+                
+                if (data.name === 'create_audio_brief') {
+                  try {
+                    const args = JSON.parse(data.arguments);
+                    console.log('Creating audio brief with args:', args);
+                    
+                    // Transform the arguments to match our API
+                    const briefRequest = {
+                      topics: args.topics || [],
+                      mood: args.mood || 'informative',
+                      durationSec: args.duration_sec || 300
+                    };
+                    
+                    // Create the audio brief
+                    const result = await createAudioBrief(briefRequest);
+                    
+                    // Send result back to OpenAI
+                    const responseEvent = {
+                      type: 'conversation.item.create',
+                      item: {
+                        type: 'function_call_output',
+                        call_id: data.call_id,
+                        output: JSON.stringify(result)
+                      }
+                    };
+                    
+                    openaiWs?.send(JSON.stringify(responseEvent));
+                    openaiWs?.send(JSON.stringify({ type: 'response.create' }));
+                    
+                    // Also send to client for UI updates
+                    socket.send(JSON.stringify({
+                      type: 'brief_created',
+                      data: result
+                    }));
+                    
+                  } catch (error) {
+                    console.error('Error processing function call:', error);
+                  }
+                }
+              }
+              
+              // Forward all other messages to client
+              socket.send(event.data);
+              
+            } catch (error) {
+              console.error('Error processing OpenAI message:', error);
             }
-          }
+          };
+
+          openaiWs.onerror = (error) => {
+            console.error('OpenAI WebSocket error:', error);
+            socket.send(JSON.stringify({ type: 'error', message: 'Connection error' }));
+          };
+
+          openaiWs.onclose = () => {
+            console.log('OpenAI WebSocket closed');
+            socket.close();
+          };
           
-          // Forward all other messages to client
-          socket.send(event.data);
-          
-        } catch (error) {
-          console.error('Error processing OpenAI message:', error);
+          return;
         }
-      };
 
-      openaiWs.onerror = (error) => {
-        console.error('OpenAI WebSocket error:', error);
-        socket.send(JSON.stringify({ type: 'error', message: 'Connection error' }));
-      };
-
-      openaiWs.onclose = () => {
-        console.log('OpenAI WebSocket closed');
-        socket.close();
-      };
-    };
-
-    socket.onmessage = (event) => {
-      // Forward client messages to OpenAI
-      if (openaiWs && openaiWs.readyState === WebSocket.OPEN) {
-        console.log('Forwarding message to OpenAI');
-        openaiWs.send(event.data);
+        // Forward client messages to OpenAI (only if authenticated)
+        if (authenticated && openaiWs && openaiWs.readyState === WebSocket.OPEN) {
+          console.log('Forwarding message to OpenAI');
+          openaiWs.send(event.data);
+        } else if (!authenticated) {
+          console.log('Client not authenticated, ignoring message');
+        }
+      } catch (error) {
+        console.error('Error processing client message:', error);
       }
     };
 

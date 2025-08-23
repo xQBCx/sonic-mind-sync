@@ -58,9 +58,49 @@ const VoiceInterface: React.FC = () => {
 
   const startConversation = async () => {
     try {
-      // Request microphone permission first
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      // First check if we have microphone permission
+      let permissionGranted = false;
       
+      try {
+        // Request microphone permission first
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop the stream immediately - we just needed to check permission
+        stream.getTracks().forEach(track => track.stop());
+        permissionGranted = true;
+      } catch (permissionError) {
+        console.error('Microphone permission error:', permissionError);
+        
+        let errorMessage = 'Microphone access denied';
+        if (permissionError instanceof Error) {
+          if (permissionError.name === 'NotAllowedError') {
+            errorMessage = 'Microphone permission denied. Please allow microphone access and try again.';
+          } else if (permissionError.name === 'NotFoundError') {
+            errorMessage = 'No microphone found. Please connect a microphone and try again.';
+          } else if (permissionError.name === 'NotSupportedError') {
+            errorMessage = 'Microphone not supported in this browser.';
+          } else {
+            errorMessage = `Microphone error: ${permissionError.message}`;
+          }
+        }
+        
+        toast({
+          title: "Microphone Access Required",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      if (!permissionGranted) {
+        toast({
+          title: "Microphone Access Required",
+          description: "Please allow microphone access to use voice features.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Now start the realtime chat
       chatRef.current = new RealtimeChat(handleMessage, handleConnectionChange);
       await chatRef.current.connect();
       setIsListening(true);
@@ -72,8 +112,8 @@ const VoiceInterface: React.FC = () => {
     } catch (error) {
       console.error('Error starting conversation:', error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : 'Failed to start voice interface',
+        title: "Connection Error",
+        description: error instanceof Error ? error.message : 'Failed to connect to voice service',
         variant: "destructive",
       });
     }
