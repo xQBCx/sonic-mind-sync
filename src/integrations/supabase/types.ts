@@ -23,6 +23,7 @@ export type Database = {
           id: string
           mood: string | null
           script: string | null
+          sound_effect_url: string | null
           status: string | null
           topics: string[] | null
           updated_at: string | null
@@ -36,6 +37,7 @@ export type Database = {
           id?: string
           mood?: string | null
           script?: string | null
+          sound_effect_url?: string | null
           status?: string | null
           topics?: string[] | null
           updated_at?: string | null
@@ -49,6 +51,7 @@ export type Database = {
           id?: string
           mood?: string | null
           script?: string | null
+          sound_effect_url?: string | null
           status?: string | null
           topics?: string[] | null
           updated_at?: string | null
