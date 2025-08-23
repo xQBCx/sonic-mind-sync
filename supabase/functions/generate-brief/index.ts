@@ -227,7 +227,12 @@ serve(async (req) => {
     }
     
     // Start background task
-    EdgeRuntime.waitUntil(generateAudio());
+    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+      EdgeRuntime.waitUntil(generateAudio());
+    } else {
+      // Fallback: start background task without waitUntil
+      generateAudio().catch(error => console.error('Background task failed:', error));
+    }
 
     // Return immediate response
     console.log('=== FUNCTION SUCCESS ===');
