@@ -83,7 +83,7 @@ export async function createBrief(req: CreateBriefReq): Promise<{ briefId: strin
   }
 
   // invoke edge function; supabase client auto-attaches the user's JWT
-  const { data, error } = await supabase.functions.invoke("generate-brief", {
+  const { data, error } = await supabase.functions.invoke("generate-brief-openai", {
     body: req,
   });
   

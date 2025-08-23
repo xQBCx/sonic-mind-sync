@@ -20,23 +20,20 @@ serve(async (req) => {
   }
 
   try {
-    console.log('=== FUNCTION START ===');
-    console.log('Method:', req.method);
-    console.log('URL:', req.url);
+    console.log('=== OPENAI TTS FUNCTION START ===');
     
     // Check environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
-    const elevenlabsKey = Deno.env.get('ELEVENLABS_API_KEY');
+    const openaiKey = Deno.env.get('OPENAI_API_KEY');
     
     console.log('Environment check:');
     console.log('- SUPABASE_URL present:', !!supabaseUrl);
     console.log('- SUPABASE_ANON_KEY present:', !!supabaseAnonKey);
-    console.log('- ELEVENLABS_API_KEY present:', !!elevenlabsKey);
-    console.log('- ELEVENLABS_API_KEY value (first 10 chars):', elevenlabsKey?.substring(0, 10));
+    console.log('- OPENAI_API_KEY present:', !!openaiKey);
     
-    if (!supabaseUrl || !supabaseAnonKey) {
-      console.error('Missing Supabase environment variables');
+    if (!supabaseUrl || !supabaseAnonKey || !openaiKey) {
+      console.error('Missing required environment variables');
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -45,10 +42,7 @@ serve(async (req) => {
 
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
-    console.log('Auth header present:', !!authHeader);
-    
     if (!authHeader) {
-      console.error('No authorization header');
       return new Response(JSON.stringify({ error: 'Authentication required' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -56,73 +50,25 @@ serve(async (req) => {
     }
 
     // Create Supabase client
-    console.log('Creating Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-      global: {
-        headers: {
-          Authorization: authHeader,
-        },
-      },
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: { headers: { Authorization: authHeader } },
     });
 
     // Verify user authentication
-    console.log('Verifying user...');
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError) {
-      console.error('Auth error:', authError);
-      return new Response(JSON.stringify({ error: 'Authentication failed', details: authError }), {
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Authentication failed' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    
-    if (!user) {
-      console.error('No user found');
-      return new Response(JSON.stringify({ error: 'User not found' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    console.log('User authenticated:', user.id);
 
     // Parse request body
-    console.log('Parsing request body...');
-    let requestBody;
-    try {
-      const bodyText = await req.text();
-      console.log('Raw body text:', bodyText);
-      requestBody = JSON.parse(bodyText);
-      console.log('Parsed body:', requestBody);
-    } catch (parseError) {
-      console.error('Body parse error:', parseError);
-      return new Response(JSON.stringify({ error: 'Invalid request body', details: parseError.message }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
+    const requestBody = await req.json();
     const { mood, topics, durationSec } = requestBody;
-    console.log('Extracted params:', { mood, topics, durationSec });
-
-    // Validate parameters
-    if (!mood || !topics || !durationSec) {
-      console.error('Missing parameters');
-      return new Response(JSON.stringify({ 
-        error: 'Missing required parameters',
-        received: { mood: !!mood, topics: !!topics, durationSec: !!durationSec }
-      }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     // Insert brief into database
-    console.log('Inserting brief...');
     const briefData = {
       user_id: user.id,
       mood,
@@ -130,7 +76,6 @@ serve(async (req) => {
       duration_sec: durationSec,
       status: 'queued'
     };
-    console.log('Brief data to insert:', briefData);
 
     const { data: brief, error: insertError } = await supabase
       .from('briefs')
@@ -140,10 +85,7 @@ serve(async (req) => {
 
     if (insertError) {
       console.error('Insert error:', insertError);
-      return new Response(JSON.stringify({ 
-        error: 'Failed to create brief', 
-        details: insertError 
-      }), {
+      return new Response(JSON.stringify({ error: 'Failed to create brief' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -151,10 +93,10 @@ serve(async (req) => {
 
     console.log('Brief created successfully:', brief.id);
 
-    // Start audio generation in background
-    async function generateAudio() {
+    // Generate audio with OpenAI TTS
+    async function generateAudioOpenAI() {
       try {
-        console.log('Starting background audio generation...');
+        console.log('Starting OpenAI TTS generation...');
         
         // Generate script
         const sampleScripts = {
@@ -167,41 +109,33 @@ serve(async (req) => {
         // Update status to TTS
         await supabase.from('briefs').update({ status: 'tts', script }).eq('id', brief.id);
         
-        // Generate TTS with ElevenLabs
-        const elevenlabsApiKey = Deno.env.get('ELEVENLABS_API_KEY');
-        if (!elevenlabsApiKey) {
-          throw new Error('ElevenLabs API key not configured');
-        }
-        
-        const voiceId = '9BWtsMINqrJLrRacOk9x'; // Aria voice
-        const ttsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+        // Generate TTS with OpenAI
+        console.log('Calling OpenAI TTS API...');
+        const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
           method: 'POST',
           headers: {
-            'Accept': 'audio/mpeg',
+            'Authorization': `Bearer ${openaiKey}`,
             'Content-Type': 'application/json',
-            'xi-api-key': elevenlabsApiKey,
           },
           body: JSON.stringify({
-            text: script,
-            model_id: 'eleven_multilingual_v2',
-            voice_settings: {
-              stability: 0.5,
-              similarity_boost: 0.5,
-            },
+            model: 'tts-1',
+            input: script,
+            voice: mood === 'energy' ? 'nova' : mood === 'calm' ? 'shimmer' : 'alloy',
+            response_format: 'mp3',
           }),
         });
 
         if (!ttsResponse.ok) {
           const errorText = await ttsResponse.text();
-          console.error('ElevenLabs error:', errorText);
-          throw new Error(`TTS failed: ${ttsResponse.status}`);
+          console.error('OpenAI TTS error:', errorText);
+          throw new Error(`TTS failed: ${ttsResponse.status} - ${errorText}`);
         }
 
         const audioBuffer = await ttsResponse.arrayBuffer();
         const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
         const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;
         
-        console.log('Audio generated successfully');
+        console.log('Audio generated successfully with OpenAI TTS');
         
         // Update brief with ready status
         await supabase
@@ -216,7 +150,7 @@ serve(async (req) => {
         console.log('Brief completed successfully');
         
       } catch (error) {
-        console.error('Background audio generation failed:', error);
+        console.error('OpenAI TTS generation failed:', error);
         await supabase
           .from('briefs')
           .update({ 
@@ -227,16 +161,10 @@ serve(async (req) => {
       }
     }
     
-    // Start background task
-    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
-      EdgeRuntime.waitUntil(generateAudio());
-    } else {
-      // Fallback: start background task without waitUntil
-      generateAudio().catch(error => console.error('Background task failed:', error));
-    }
+    // Start background task immediately
+    generateAudioOpenAI().catch(error => console.error('Background task failed:', error));
 
     // Return immediate response
-    console.log('=== FUNCTION SUCCESS ===');
     return new Response(JSON.stringify({ 
       briefId: brief.id, 
       status: 'queued'
@@ -245,16 +173,10 @@ serve(async (req) => {
     });
 
   } catch (error) {
-    console.error('=== FUNCTION ERROR ===');
-    console.error('Error type:', typeof error);
-    console.error('Error message:', error.message);
-    console.error('Error stack:', error.stack);
-    console.error('Full error:', error);
-    
+    console.error('=== FUNCTION ERROR ===', error);
     return new Response(JSON.stringify({ 
       error: 'Internal server error',
-      message: error.message,
-      type: typeof error
+      message: error.message
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
