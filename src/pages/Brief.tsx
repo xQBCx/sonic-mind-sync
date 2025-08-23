@@ -37,8 +37,9 @@ export default function BriefPage() {
         .from("briefs")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
       if (error) { setErr(error.message); setLoading(false); return; }
+      if (!data) { setErr("Brief not found"); setLoading(false); return; }
       setBrief(data as Brief);
       setLoading(false);
       // re-poll every 3s until not queued (or until ready/error)

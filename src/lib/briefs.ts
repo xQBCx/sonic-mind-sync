@@ -21,8 +21,9 @@ export async function createBrief(params: {
       status: "queued",
     })
     .select("id")
-    .single();
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error("Failed to create brief");
   const id = data.id as string;
 
   // Start mock progression if in mock mode
