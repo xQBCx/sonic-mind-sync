@@ -13,6 +13,88 @@ interface GenerateBriefRequest {
   durationSec: number;
 }
 
+// Generate audio with OpenAI TTS
+async function generateAudioOpenAI(briefId: string, mood: string, topics: string[], openaiKey: string, supabaseUrl: string, supabaseAnonKey: string, authHeader: string) {
+  try {
+    console.log('Starting OpenAI TTS generation for brief:', briefId);
+    
+    // Create a new Supabase client for background task
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: { headers: { Authorization: authHeader } },
+    });
+    
+    // Generate script
+    const sampleScripts = {
+      focus: `Welcome to your focus session. Today we're exploring ${topics.join(', ')}. Let's dive deep into concentration and clarity, eliminating distractions and maximizing your cognitive potential.`,
+      energy: `Get ready to energize! Today's topics include ${topics.join(', ')}. Feel the motivation building as we explore dynamic concepts that will boost your energy and drive.`,
+      calm: `Take a deep breath and relax. We'll be gently exploring ${topics.join(', ')} in a soothing manner that promotes peace and tranquility.`
+    } as Record<string, string>;
+    
+    const script = sampleScripts[mood] || 'Welcome to your personalized briefing.';
+    
+    // Update status to TTS
+    await supabase.from('briefs').update({ status: 'tts', script }).eq('id', briefId);
+    
+    // Generate TTS with OpenAI
+    console.log('Calling OpenAI TTS API...');
+    const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'tts-1',
+        input: script,
+        voice: mood === 'energy' ? 'nova' : mood === 'calm' ? 'shimmer' : 'alloy',
+        response_format: 'mp3',
+      }),
+    });
+
+    if (!ttsResponse.ok) {
+      const errorText = await ttsResponse.text();
+      console.error('OpenAI TTS error:', errorText);
+      throw new Error(`TTS failed: ${ttsResponse.status} - ${errorText}`);
+    }
+
+    const audioBuffer = await ttsResponse.arrayBuffer();
+    const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+    const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;
+    
+    console.log('Audio generated successfully with OpenAI TTS');
+    
+    // Update brief with ready status
+    await supabase
+      .from('briefs')
+      .update({
+        status: 'ready',
+        script,
+        audio_url: audioDataUrl,
+      })
+      .eq('id', briefId);
+      
+    console.log('Brief completed successfully');
+    
+  } catch (error) {
+    console.error('OpenAI TTS generation failed:', error);
+    
+    // Create a new Supabase client for error handling
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: { headers: { Authorization: authHeader } },
+    });
+    
+    await supabase
+      .from('briefs')
+      .update({ 
+        status: 'error', 
+        error_message: error.message 
+      })
+      .eq('id', briefId);
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -92,77 +174,12 @@ serve(async (req) => {
     }
 
     console.log('Brief created successfully:', brief.id);
-
-    // Generate audio with OpenAI TTS
-    async function generateAudioOpenAI() {
-      try {
-        console.log('Starting OpenAI TTS generation...');
-        
-        // Generate script
-        const sampleScripts = {
-          focus: `Welcome to your focus session. Today we're exploring ${topics.join(', ')}. Let's dive deep into concentration and clarity, eliminating distractions and maximizing your cognitive potential.`,
-          energy: `Get ready to energize! Today's topics include ${topics.join(', ')}. Feel the motivation building as we explore dynamic concepts that will boost your energy and drive.`,
-          calm: `Take a deep breath and relax. We'll be gently exploring ${topics.join(', ')} in a soothing manner that promotes peace and tranquility.`
-        };
-        const script = sampleScripts[mood] || 'Welcome to your personalized briefing.';
-        
-        // Update status to TTS
-        await supabase.from('briefs').update({ status: 'tts', script }).eq('id', brief.id);
-        
-        // Generate TTS with OpenAI
-        console.log('Calling OpenAI TTS API...');
-        const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${openaiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'tts-1',
-            input: script,
-            voice: mood === 'energy' ? 'nova' : mood === 'calm' ? 'shimmer' : 'alloy',
-            response_format: 'mp3',
-          }),
-        });
-
-        if (!ttsResponse.ok) {
-          const errorText = await ttsResponse.text();
-          console.error('OpenAI TTS error:', errorText);
-          throw new Error(`TTS failed: ${ttsResponse.status} - ${errorText}`);
-        }
-
-        const audioBuffer = await ttsResponse.arrayBuffer();
-        const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
-        const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;
-        
-        console.log('Audio generated successfully with OpenAI TTS');
-        
-        // Update brief with ready status
-        await supabase
-          .from('briefs')
-          .update({
-            status: 'ready',
-            script,
-            audio_url: audioDataUrl,
-          })
-          .eq('id', brief.id);
-          
-        console.log('Brief completed successfully');
-        
-      } catch (error) {
-        console.error('OpenAI TTS generation failed:', error);
-        await supabase
-          .from('briefs')
-          .update({ 
-            status: 'error', 
-            error_message: error.message 
-          })
-          .eq('id', brief.id);
-      }
-    }
     
-    // Start background task immediately
-    generateAudioOpenAI().catch(error => console.error('Background task failed:', error));
+    // Start background task using setTimeout to avoid blocking
+    setTimeout(() => {
+      generateAudioOpenAI(brief.id, mood, topics, openaiKey, supabaseUrl, supabaseAnonKey, authHeader)
+        .catch(error => console.error('Background task failed:', error));
+    }, 0);
 
     // Return immediate response
     return new Response(JSON.stringify({ 
