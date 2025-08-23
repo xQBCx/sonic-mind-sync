@@ -115,13 +115,9 @@ serve(async (req) => {
 
     console.log('Brief created:', brief.id);
 
-    // For MVP, immediately mark as ready with sample audio
-    // In production, this would be where you'd call OpenAI, MusicGen, etc.
-    
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    console.log('Starting audio generation with ElevenLabs...');
 
-    // Generate sample script based on mood and topics
+    // Generate script based on mood and topics
     const sampleScripts = {
       focus: `Welcome to your focus session. Today we're exploring ${topics.join(', ')}. Let's dive deep into concentration and clarity, eliminating distractions and maximizing your cognitive potential.`,
       energy: `Get ready to energize! Today's topics include ${topics.join(', ')}. Feel the motivation building as we explore dynamic concepts that will boost your energy and drive.`,
@@ -130,32 +126,128 @@ serve(async (req) => {
 
     const script = sampleScripts[mood] || 'Welcome to your personalized briefing.';
 
-    // Update brief with ready status and sample content
-    const { error: updateError } = await supabaseUser
+    // Update brief with processing status
+    await supabaseUser
       .from('briefs')
       .update({
-        status: 'ready',
+        status: 'processing',
         script,
-        audio_url: '/sample.mp3', // Using public sample audio for MVP
       })
       .eq('id', brief.id);
 
-    if (updateError) {
-      console.error('Failed to update brief:', updateError);
-      return new Response(JSON.stringify({ error: 'Failed to update brief' }), {
+    try {
+      // Generate TTS audio with ElevenLabs
+      const voiceId = '9BWtsMINqrJLrRacOk9x'; // Aria voice
+      const model = 'eleven_multilingual_v2';
+      
+      const ttsResponse = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+        method: 'POST',
+        headers: {
+          'Accept': 'audio/mpeg',
+          'Content-Type': 'application/json',
+          'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY'),
+        },
+        body: JSON.stringify({
+          text: script,
+          model_id: model,
+          voice_settings: {
+            stability: 0.5,
+            similarity_boost: 0.5,
+          },
+        }),
+      });
+
+      if (!ttsResponse.ok) {
+        const errorData = await ttsResponse.text();
+        console.error('ElevenLabs TTS error:', errorData);
+        throw new Error(`TTS generation failed: ${ttsResponse.status}`);
+      }
+
+      const audioBuffer = await ttsResponse.arrayBuffer();
+      const audioBase64 = btoa(String.fromCharCode(...new Uint8Array(audioBuffer)));
+      
+      console.log('TTS audio generated successfully');
+
+      // Generate sound effects based on mood
+      let soundEffectUrl = null;
+      try {
+        const soundEffectPrompts = {
+          focus: 'soft ambient nature sounds, gentle rain, subtle concentration atmosphere',
+          energy: 'upbeat motivational background, subtle energy boost sounds',
+          calm: 'peaceful meditation ambience, soft breathing, tranquil atmosphere'
+        };
+
+        const sfxResponse = await fetch('https://api.elevenlabs.io/v1/sound-generation', {
+          method: 'POST',
+          headers: {
+            'Accept': 'audio/mpeg',
+            'Content-Type': 'application/json',
+            'xi-api-key': Deno.env.get('ELEVENLABS_API_KEY'),
+          },
+          body: JSON.stringify({
+            text: soundEffectPrompts[mood],
+            duration_seconds: Math.min(durationSec, 22), // ElevenLabs max duration
+          }),
+        });
+
+        if (sfxResponse.ok) {
+          const sfxBuffer = await sfxResponse.arrayBuffer();
+          const sfxBase64 = btoa(String.fromCharCode(...new Uint8Array(sfxBuffer)));
+          soundEffectUrl = `data:audio/mpeg;base64,${sfxBase64}`;
+          console.log('Sound effects generated successfully');
+        } else {
+          console.log('Sound effects generation failed, continuing without SFX');
+        }
+      } catch (sfxError) {
+        console.log('Sound effects error:', sfxError.message);
+      }
+
+      // Store the audio file as base64 data URL for now
+      // In production, you'd upload to Supabase Storage
+      const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;
+
+      // Update brief with ready status and generated content
+      const { error: updateError } = await supabaseUser
+        .from('briefs')
+        .update({
+          status: 'ready',
+          script,
+          audio_url: audioDataUrl,
+          sound_effect_url: soundEffectUrl,
+        })
+        .eq('id', brief.id);
+
+      if (updateError) {
+        console.error('Failed to update brief:', updateError);
+        throw new Error('Failed to update brief');
+      }
+
+      console.log('Brief completed successfully:', brief.id);
+
+      return new Response(JSON.stringify({ 
+        briefId: brief.id, 
+        status: 'ready' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+
+    } catch (audioError) {
+      console.error('Audio generation error:', audioError);
+      
+      // Update brief with error status
+      await supabaseUser
+        .from('briefs')
+        .update({
+          status: 'error',
+          script,
+        })
+        .eq('id', brief.id);
+
+      return new Response(JSON.stringify({ error: 'Failed to generate audio' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    console.log('Brief completed successfully:', brief.id);
-
-    return new Response(JSON.stringify({ 
-      briefId: brief.id, 
-      status: 'ready' 
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
 
   } catch (error) {
     console.error('Error in generate-brief function:', error);
