@@ -17,7 +17,7 @@ import { Header } from "@/components/Header";
 
 
 const moods = [
-  { id: 'focus', name: 'Focus', description: 'Deep concentration and clarity' },
+  { id: 'focus', name: 'Focus', description: 'Concentration and clarity' },
   { id: 'energy', name: 'Energy', description: 'Motivation and drive' },
   { id: 'calm', name: 'Calm', description: 'Relaxation and peace' }
 ] as const;
