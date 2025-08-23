@@ -145,3 +145,12 @@ export async function getBriefHistory(): Promise<BriefHistoryItem[]> {
     return [];
   }
 }
+
+// Mock audio generation API
+export async function generateAudio(params: { genre: string; mood: string; text: string; voice: string }) {
+  // Simulate API delay
+  await new Promise(r => setTimeout(r, 3000));
+  
+  // Return placeholder audio file
+  return { url: "/sample.mp3" };
+}
