@@ -157,7 +157,7 @@ export const ViralWaitlist = ({ onSignup }: ViralWaitlistProps) => {
         </div>
 
         <div className="text-xs text-muted-foreground text-center">
-          🧠 Public Benefit Corp • 🔬 Science-Backed • 🚀 Mission-Driven
+          🧠 Public Benefit Corp • 🔬 Patent-Pending Technology • 🚀 Mission-Driven
         </div>
       </CardContent>
     </Card>
