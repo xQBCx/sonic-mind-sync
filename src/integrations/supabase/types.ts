@@ -95,6 +95,81 @@ export type Database = {
         }
         Relationships: []
       }
+      schedules: {
+        Row: {
+          created_at: string
+          duration_sec: number
+          id: string
+          is_active: boolean | null
+          label: string
+          last_generated_at: string | null
+          mood: string
+          schedule_time: string
+          timezone: string | null
+          topics: string[] | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_sec?: number
+          id?: string
+          is_active?: boolean | null
+          label: string
+          last_generated_at?: string | null
+          mood: string
+          schedule_time: string
+          timezone?: string | null
+          topics?: string[] | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_sec?: number
+          id?: string
+          is_active?: boolean | null
+          label?: string
+          last_generated_at?: string | null
+          mood?: string
+          schedule_time?: string
+          timezone?: string | null
+          topics?: string[] | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_analytics: {
+        Row: {
+          brief_id: string | null
+          context: Json | null
+          created_at: string
+          event_type: string
+          id: string
+          session_duration_sec: number | null
+          user_id: string
+        }
+        Insert: {
+          brief_id?: string | null
+          context?: Json | null
+          created_at?: string
+          event_type: string
+          id?: string
+          session_duration_sec?: number | null
+          user_id: string
+        }
+        Update: {
+          brief_id?: string | null
+          context?: Json | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          session_duration_sec?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -107,6 +182,16 @@ export type Database = {
           p_language_preference?: string
           p_learning_goals?: string
           p_origin?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      track_user_event: {
+        Args: {
+          p_brief_id?: string
+          p_context?: Json
+          p_event_type: string
+          p_session_duration_sec?: number
           p_user_id: string
         }
         Returns: undefined

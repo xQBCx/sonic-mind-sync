@@ -34,8 +34,14 @@ export function Header() {
               <Link to="/history" className="text-muted-foreground hover:text-foreground transition-colors">
                 History
               </Link>
+              <Link to="/schedules" className="text-muted-foreground hover:text-foreground transition-colors">
+                Schedules
+              </Link>
             </>
           )}
+          <Link to="/blog" className="text-muted-foreground hover:text-foreground transition-colors">
+            News
+          </Link>
         </nav>
 
         <div className="flex items-center space-x-4">
