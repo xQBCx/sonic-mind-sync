@@ -126,11 +126,11 @@ serve(async (req) => {
 
     const script = sampleScripts[mood] || 'Welcome to your personalized briefing.';
 
-    // Update brief with processing status
+    // Update brief with TTS status
     await supabaseUser
       .from('briefs')
       .update({
-        status: 'processing',
+        status: 'tts',
         script,
       })
       .eq('id', brief.id);
