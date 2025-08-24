@@ -229,6 +229,39 @@ export type Database = {
         }
         Relationships: []
       }
+      testimonials: {
+        Row: {
+          created_at: string
+          id: string
+          is_approved: boolean | null
+          testimonial_text: string
+          updated_at: string
+          user_email: string
+          user_name: string | null
+          user_title: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          testimonial_text: string
+          updated_at?: string
+          user_email: string
+          user_name?: string | null
+          user_title?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_approved?: boolean | null
+          testimonial_text?: string
+          updated_at?: string
+          user_email?: string
+          user_name?: string | null
+          user_title?: string | null
+        }
+        Relationships: []
+      }
       user_analytics: {
         Row: {
           brief_id: string | null
@@ -351,6 +384,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      get_platform_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
       }
       track_user_event: {
         Args: {
