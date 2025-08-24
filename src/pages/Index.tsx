@@ -7,6 +7,10 @@ import { ViralWaitlist } from "@/components/ViralWaitlist";
 import { SocialProof } from "@/components/SocialProof";
 import { ReferralTracker } from "@/components/ReferralTracker";
 import { PromoVideoModal } from "@/components/PromoVideoModal";
+import { MobileSignInButton } from "@/components/MobileSignInButton";
+import { RealTimeStats } from "@/components/RealTimeStats";
+import { RealTestimonials } from "@/components/RealTestimonials";
+import { TestimonialForm } from "@/components/TestimonialForm";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 
@@ -37,12 +41,17 @@ const Index = () => {
       ) : (
         <>
           <Hero />
-          <div className="container mx-auto px-4 py-16">
-            <SocialProof />
+          <div className="container mx-auto px-4 py-8 sm:py-16">
+            <RealTimeStats />
+            <RealTestimonials />
           </div>
-          <div className="container mx-auto px-4 py-16">
+          <div className="container mx-auto px-4 py-8 sm:py-16">
             <ViralWaitlist />
           </div>
+          <div className="container mx-auto px-4 py-8 sm:py-16">
+            <TestimonialForm />
+          </div>
+          <MobileSignInButton />
         </>
       )}
       <HowItWorks />

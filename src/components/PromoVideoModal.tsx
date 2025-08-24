@@ -39,10 +39,10 @@ export const PromoVideoModal = () => {
 
   return (
     <Dialog open={showModal} onOpenChange={setShowModal}>
-      <DialogContent className="max-w-4xl w-full">
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl font-bold">
+            <DialogTitle className="text-xl sm:text-2xl font-bold">
               Welcome to SonicBrief! 🎵
             </DialogTitle>
             <Button
@@ -56,12 +56,12 @@ export const PromoVideoModal = () => {
           </div>
         </DialogHeader>
         
-        <div className="space-y-6">
-          <p className="text-lg text-muted-foreground">
+        <div className="space-y-4 sm:space-y-6">
+          <p className="text-sm sm:text-lg text-muted-foreground">
             Discover how our patent-pending AI technology creates personalized audio experiences that sync with your brain's natural learning patterns.
           </p>
           
-          <div className="aspect-video">
+          <div className="aspect-video w-full max-w-full">
             <iframe
               src="https://www.youtube.com/embed/JBgx7Y_3sXM"
               title="SonicBrief AI Promo Video"
@@ -70,7 +70,7 @@ export const PromoVideoModal = () => {
             />
           </div>
           
-          <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-4 border-t gap-4">
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="dont-show-again"
@@ -85,11 +85,11 @@ export const PromoVideoModal = () => {
               </label>
             </div>
             
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={handleOptOut}>
-                No thanks, don't show promotions
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <Button variant="outline" onClick={handleOptOut} className="w-full sm:w-auto">
+                No thanks
               </Button>
-              <Button onClick={handleClose}>
+              <Button onClick={handleClose} className="w-full sm:w-auto">
                 Get Started
               </Button>
             </div>
