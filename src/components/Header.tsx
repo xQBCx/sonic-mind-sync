@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Link, useLocation } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
-import logoIcon from '@/assets/logo-play-icon2.png'
+import logoIcon from '@/assets/logo-play-icon.png'
 
 export function Header() {
   const { user, signOut } = useAuth()
