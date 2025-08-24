@@ -28,8 +28,10 @@ const Index = () => {
       {user ? (
         <>
           <InteractiveHero />
-          <div className="container mx-auto px-4 py-8">
-            <ReferralTracker userEmail={user.email} />
+          <div className="container mx-auto px-4 py-8 flex justify-center">
+            <div className="w-full max-w-md">
+              <ReferralTracker userEmail={user.email} />
+            </div>
           </div>
         </>
       ) : (

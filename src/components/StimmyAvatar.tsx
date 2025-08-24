@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import stimmyLight from '@/assets/stimmy-light.png'
-import stimmyAvatar from '@/assets/stimmy-avatar.png'
+import stimmyLight from '@/assets/stimmy-light3d.png'
+import stimmyAvatar from '@/assets/stimmy-avatar3d.png'
 
 interface StimmyAvatarProps {
   isSpeaking?: boolean
