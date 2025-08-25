@@ -33,7 +33,7 @@ serve(async (req) => {
     console.log('- SUPABASE_URL present:', !!supabaseUrl);
     console.log('- SUPABASE_ANON_KEY present:', !!supabaseAnonKey);
     console.log('- ELEVENLABS_API_KEY present:', !!elevenlabsKey);
-    console.log('- ELEVENLABS_API_KEY value (first 10 chars):', elevenlabsKey?.substring(0, 10));
+    // Security: Don't log API key fragments
     
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error('Missing Supabase environment variables');
@@ -156,14 +156,72 @@ serve(async (req) => {
       try {
         console.log('Starting enhanced audio generation with music...');
         
-        // Generate mood-based script
-        const moodScripts = {
-          focus: `Welcome to your enhanced focus session. Today we're diving deep into ${topics.join(', ')}. Let's eliminate distractions, sharpen your concentration, and unlock your cognitive potential. Take a deep breath as we begin this journey of focused learning.`,
-          energy: `Time to energize and ignite your passion! We're exploring ${topics.join(', ')} with dynamic energy and unstoppable momentum. Feel the excitement building as we dive into concepts that will fuel your drive and amplify your success. Let's transform learning into pure energy!`,
-          calm: `Welcome to your peaceful learning sanctuary. Today we'll gently explore ${topics.join(', ')} in a soothing, mindful way. Allow yourself to relax completely as we create a tranquil space for deep, meaningful understanding. Breathe deeply and let the knowledge flow naturally.`
-        };
+        // Generate comprehensive content using OpenAI
+        const openaiKey = Deno.env.get('OPENAI_API_KEY');
+        let script = '';
         
-        const script = moodScripts[mood] || 'Welcome to your personalized SonicBrief experience.';
+        if (openaiKey) {
+          console.log('Generating comprehensive content with OpenAI...');
+          
+          const contentPrompt = `Create a comprehensive, engaging ${Math.floor(durationSec / 60)}-minute audio script about ${topics.join(', ')} with a ${mood} tone. 
+
+The script should:
+- Be ${Math.floor(durationSec / 150)} paragraphs long (aim for ${durationSec * 2.5} words total)
+- Match the ${mood} mood perfectly
+- Include practical insights and actionable information
+- Flow naturally for audio narration
+- Be educational and valuable
+- Include smooth transitions between topics
+
+Mood guidelines:
+- Focus: Clear, structured, concentration-enhancing content
+- Energy: Dynamic, motivating, high-energy delivery
+- Calm: Soothing, mindful, relaxing presentation
+
+Write ONLY the script content, no meta-text or instructions.`;
+
+          const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are a professional audio content creator who writes engaging, informative scripts for educational audio content.'
+                },
+                {
+                  role: 'user',
+                  content: contentPrompt
+                }
+              ],
+              max_tokens: Math.min(4000, Math.max(800, durationSec * 4)),
+              temperature: 0.7
+            }),
+          });
+
+          if (openaiResponse.ok) {
+            const openaiData = await openaiResponse.json();
+            script = openaiData.choices[0].message.content;
+            console.log('Generated script length:', script.length, 'characters');
+          } else {
+            console.log('OpenAI failed, using fallback script');
+            script = `Welcome to your ${mood} session on ${topics.join(', ')}. ` + 
+                    `Let's explore these fascinating topics together in a way that matches your current mood and learning goals. ` +
+                    `This is your personalized audio experience designed to help you learn effectively while maintaining the perfect ${mood} atmosphere.`;
+          }
+        } else {
+          console.log('OpenAI not configured, using enhanced fallback...');
+          const moodScripts = {
+            focus: `Welcome to your enhanced focus session. Today we're diving deep into ${topics.join(', ')}. Let's eliminate distractions, sharpen your concentration, and unlock your cognitive potential. Take a deep breath as we begin this journey of focused learning.`,
+            energy: `Time to energize and ignite your passion! We're exploring ${topics.join(', ')} with dynamic energy and unstoppable momentum. Feel the excitement building as we dive into concepts that will fuel your drive and amplify your success. Let's transform learning into pure energy!`,
+            calm: `Welcome to your peaceful learning sanctuary. Today we'll gently explore ${topics.join(', ')} in a soothing, mindful way. Allow yourself to relax completely as we create a tranquil space for deep, meaningful understanding. Breathe deeply and let the knowledge flow naturally.`
+          };
+          script = moodScripts[mood] || 'Welcome to your personalized SonicBrief experience.';
+        }
         
         // Update status to generating
         await supabase.from('briefs').update({ 
@@ -281,25 +339,19 @@ serve(async (req) => {
         let backgroundMusicUrl = '/sample.mp3'; // fallback
         
         try {
-          // Call music generation function
-          const musicResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/generate-music`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-            },
-            body: JSON.stringify({
+          // Call music generation function using user's JWT (more secure than SRK)
+          const { data: musicData, error: musicError } = await supabase.functions.invoke('generate-music', {
+            body: {
               mood,
-              duration: Math.max(30, durationSec - 30) // Background music duration
-            }),
+              duration: Math.max(30, durationSec - 30)
+            }
           });
           
-          if (musicResponse.ok) {
-            const musicData = await musicResponse.json();
+          if (!musicError && musicData?.musicUrl) {
             backgroundMusicUrl = musicData.musicUrl;
             console.log('Background music generated successfully');
           } else {
-            console.log('Music generation failed, using fallback');
+            console.log('Music generation failed, using fallback:', musicError);
           }
         } catch (musicError) {
           console.error('Music generation error:', musicError);
