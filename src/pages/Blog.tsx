@@ -1,7 +1,7 @@
 import { Header } from "@/components/Header";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ViralWaitlist } from "@/components/ViralWaitlist";
 import { CalendarDays, Play, FileText, Users } from "lucide-react";
 
 const Blog = () => {
@@ -133,17 +133,7 @@ const Blog = () => {
             </Card>
 
             {/* Call to Action */}
-            <Card className="bg-gradient-primary/10 border-primary/30">
-              <CardContent className="p-8 text-center">
-                <h3 className="text-2xl font-bold mb-4">Ready to Join the Sound Revolution?</h3>
-                <p className="text-lg text-muted-foreground mb-6">
-                  Be part of the first 1,000 to experience patent-pending audio technology designed for peak performance.
-                </p>
-                <Button size="lg" className="bg-gradient-primary hover:shadow-glow transition-all duration-300">
-                  Join Our Waitlist
-                </Button>
-              </CardContent>
-            </Card>
+            <ViralWaitlist />
           </div>
         </div>
       </main>
