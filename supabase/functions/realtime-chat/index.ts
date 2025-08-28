@@ -23,11 +23,6 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     
-    console.log('Environment check:');
-    console.log('- SUPABASE_URL present:', !!supabaseUrl);
-    console.log('- SUPABASE_ANON_KEY present:', !!supabaseAnonKey);
-    console.log('- OPENAI_API_KEY present:', !!openaiKey);
-    
     if (!supabaseUrl || !supabaseAnonKey || !openaiKey) {
       console.error('Missing required environment variables');
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
@@ -79,7 +74,6 @@ serve(async (req) => {
     socket.onmessage = async (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('Received from client:', data.type);
         
         // Handle authentication
         if (data.type === 'auth') {
@@ -104,7 +98,7 @@ serve(async (req) => {
             return;
           }
 
-          console.log('User authenticated:', user.id);
+          console.log('User authenticated');
           authenticated = true;
           
           // Now connect to OpenAI
@@ -120,7 +114,6 @@ serve(async (req) => {
             // ... rest of OpenAI message handling
             try {
               const data = JSON.parse(event.data);
-              console.log('OpenAI message type:', data.type);
               
               // Handle session creation
               if (data.type === 'session.created' && !sessionCreated) {
@@ -219,7 +212,6 @@ Your goal is to create the perfect audio experience for their current state and 
                 if (data.name === 'create_audio_brief') {
                   try {
                     const args = JSON.parse(data.arguments);
-                    console.log('Creating audio brief with args:', args);
                     
                     // Transform the arguments to match our API
                     const briefRequest = {

@@ -21,19 +21,11 @@ serve(async (req) => {
 
   try {
     console.log('=== FUNCTION START ===');
-    console.log('Method:', req.method);
-    console.log('URL:', req.url);
     
     // Check environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const elevenlabsKey = Deno.env.get('ELEVENLABS_API_KEY');
-    
-    console.log('Environment check:');
-    console.log('- SUPABASE_URL present:', !!supabaseUrl);
-    console.log('- SUPABASE_ANON_KEY present:', !!supabaseAnonKey);
-    console.log('- ELEVENLABS_API_KEY present:', !!elevenlabsKey);
-    // Security: Don't log API key fragments
     
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error('Missing Supabase environment variables');
@@ -45,7 +37,6 @@ serve(async (req) => {
 
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
-    console.log('Auth header present:', !!authHeader);
     
     if (!authHeader) {
       console.error('No authorization header');
@@ -56,7 +47,6 @@ serve(async (req) => {
     }
 
     // Create Supabase client
-    console.log('Creating Supabase client...');
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         autoRefreshToken: false,
@@ -70,7 +60,6 @@ serve(async (req) => {
     });
 
     // Verify user authentication
-    console.log('Verifying user...');
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError) {
       console.error('Auth error:', authError);
@@ -88,26 +77,22 @@ serve(async (req) => {
       });
     }
 
-    console.log('User authenticated:', user.id);
+    console.log('User authenticated');
 
     // Parse request body
-    console.log('Parsing request body...');
     let requestBody;
     try {
       const bodyText = await req.text();
-      console.log('Raw body text:', bodyText);
       requestBody = JSON.parse(bodyText);
-      console.log('Parsed body:', requestBody);
     } catch (parseError) {
-      console.error('Body parse error:', parseError);
-      return new Response(JSON.stringify({ error: 'Invalid request body', details: parseError.message }), {
+      console.error('Body parse error');
+      return new Response(JSON.stringify({ error: 'Invalid request body' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const { mood, topics, durationSec } = requestBody;
-    console.log('Extracted params:', { mood, topics, durationSec });
 
     // Validate parameters
     if (!mood || !topics || !durationSec) {
@@ -122,7 +107,6 @@ serve(async (req) => {
     }
 
     // Insert brief into database
-    console.log('Inserting brief...');
     const briefData = {
       user_id: user.id,
       mood,
@@ -130,7 +114,6 @@ serve(async (req) => {
       duration_sec: durationSec,
       status: 'queued'
     };
-    console.log('Brief data to insert:', briefData);
 
     const { data: brief, error: insertError } = await supabase
       .from('briefs')
@@ -149,7 +132,7 @@ serve(async (req) => {
       });
     }
 
-    console.log('Brief created successfully:', brief.id);
+    console.log('Brief created successfully');
 
     // Start audio generation in background
     async function generateAudio() {

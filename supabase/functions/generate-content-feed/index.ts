@@ -28,11 +28,6 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
     
-    console.log('Environment check:');
-    console.log('- SUPABASE_URL present:', !!supabaseUrl);
-    console.log('- SUPABASE_ANON_KEY present:', !!supabaseAnonKey);
-    console.log('- OPENAI_API_KEY present:', !!openaiKey);
-    
     if (!supabaseUrl || !supabaseAnonKey || !openaiKey) {
       console.error('Missing required environment variables');
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
@@ -58,12 +53,10 @@ serve(async (req) => {
       });
     }
 
-    console.log('User authenticated:', user.id);
+    console.log('User authenticated');
 
     // Parse request body
     const { topics, feedType, mood, maxItems = 5 }: GenerateContentFeedRequest = await req.json();
-    
-    console.log('Request params:', { topics, feedType, mood, maxItems, userId: user.id });
 
     // Validate input
     if (!topics || !Array.isArray(topics) || topics.length === 0) {
@@ -103,7 +96,7 @@ Feed type: ${feedType}
 Mood/Tone: ${mood}
 Number of items: ${maxItems}`;
 
-    console.log('Calling OpenAI API...');
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -129,8 +122,6 @@ Number of items: ${maxItems}`;
 
     const data = await response.json();
     const generatedContent = data.choices[0].message.content;
-    
-    console.log('OpenAI response received');
 
     let contentFeed;
     try {
@@ -148,7 +139,7 @@ Number of items: ${maxItems}`;
     }
 
     // Log successful generation
-    console.log(`Generated ${contentFeed.length} content items for user ${user.id}`);
+    console.log(`Generated ${contentFeed.length} content items`);
 
     return new Response(JSON.stringify({ 
       success: true,

@@ -59,6 +59,13 @@ export type Database = {
             referencedRelation: "briefs"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_audio_segments_brief_id"
+            columns: ["brief_id"]
+            isOneToOne: false
+            referencedRelation: "briefs"
+            referencedColumns: ["id"]
+          },
         ]
       }
       briefs: {
@@ -78,7 +85,7 @@ export type Database = {
           topics: string[] | null
           total_segments: number | null
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           audio_url?: string | null
@@ -96,7 +103,7 @@ export type Database = {
           topics?: string[] | null
           total_segments?: number | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           audio_url?: string | null
@@ -114,7 +121,7 @@ export type Database = {
           topics?: string[] | null
           total_segments?: number | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }

@@ -63,3 +63,15 @@ ip_version = "ipv4"
 
 [functions.generate-brief]
 verify_jwt = true
+
+[functions.generate-brief-openai]
+verify_jwt = true
+
+[functions.generate-content-feed]
+verify_jwt = true
+
+[functions.realtime-chat]
+verify_jwt = true
+
+[functions.scheduled-brief-generator]
+verify_jwt = true
