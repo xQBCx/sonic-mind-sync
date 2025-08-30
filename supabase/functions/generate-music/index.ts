@@ -21,9 +21,9 @@ serve(async (req) => {
 
     // Generate music based on mood using CometAPI -> Suno pipeline
     const musicPrompts = {
-      focus: `Create a ${duration}-second ambient electronic track with subtle synthesizer pads, minimal percussion, and flowing melodies that enhance concentration and mental clarity`,
-      energy: `Generate a ${duration}-second upbeat electronic music track with driving beats, motivational rhythms, and energizing synthesizers that boost motivation and energy`,
-      calm: `Produce a ${duration}-second peaceful ambient soundscape with gentle piano, soft strings, nature sounds, and meditative tones for relaxation and calm focus`
+      focus: `Create a ${duration}-second instrumental ambient electronic track with subtle synthesizer pads, minimal percussion, flowing melodies, and gentle atmospheric sounds that enhance concentration and mental clarity. Make it loopable and suitable for background listening during study or work sessions.`,
+      energy: `Generate a ${duration}-second high-energy instrumental electronic music track with driving beats, motivational rhythms, energizing synthesizers, and uplifting melodies that boost motivation and energy. Include dynamic build-ups and drops to maintain engagement.`,
+      calm: `Produce a ${duration}-second peaceful instrumental ambient soundscape with gentle piano, soft strings, nature sounds, meditative tones, and flowing harmonies for relaxation and calm focus. Create a serene atmosphere perfect for meditation or unwinding.`
     };
 
     const prompt = musicPrompts[mood] || musicPrompts.focus;

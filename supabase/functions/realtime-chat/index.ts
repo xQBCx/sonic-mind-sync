@@ -103,12 +103,21 @@ serve(async (req) => {
           
           // Now connect to OpenAI
           const openaiUrl = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-12-17';
-          openaiWs = new WebSocket(openaiUrl, ['realtime', `Bearer ${openaiKey}`]);
+          openaiWs = new WebSocket(openaiUrl);
           
+          // Send authorization after connection
           openaiWs.onopen = () => {
             console.log('Connected to OpenAI Realtime API');
+            // Send authorization
+            openaiWs?.send(JSON.stringify({
+              type: 'session.update',
+              session: {
+                authorization: `Bearer ${openaiKey}`
+              }
+            }));
             socket.send(JSON.stringify({ type: 'connected' }));
           };
+          
 
           openaiWs.onmessage = async (event) => {
             // ... rest of OpenAI message handling
