@@ -30,8 +30,9 @@ serve(async (req) => {
 
     console.log('Generating music with CometAPI, prompt:', prompt);
 
-    // Call CometAPI to generate music through Suno
-    const cometResponse = await fetch('https://api.cometapi.com/suno/submit/music', {
+    // Submit music generation task to CometAPI
+    console.log('Submitting music generation task to CometAPI...');
+    const submitResponse = await fetch('https://api.cometapi.com/suno/submit/music', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${cometApiKey}`,
@@ -41,26 +42,87 @@ serve(async (req) => {
         prompt: prompt,
         mv: 'chirp-auk', // Suno v4.5
         instrumental: true, // For background music
-        wait_audio: true, // Wait for audio generation to complete
         tags: 'instrumental background music'
       }),
     });
 
-    if (!cometResponse.ok) {
-      const errorText = await cometResponse.text();
-      console.error('CometAPI error:', errorText);
-      throw new Error(`CometAPI request failed: ${cometResponse.status}`);
+    if (!submitResponse.ok) {
+      const errorText = await submitResponse.text();
+      console.error('CometAPI submit error:', errorText);
+      throw new Error(`CometAPI submit failed: ${submitResponse.status}`);
     }
 
-    const cometData = await cometResponse.json();
-    console.log('CometAPI response:', cometData);
+    const submitData = await submitResponse.json();
+    console.log('CometAPI submit response:', submitData);
 
-    // Extract the audio URL from the response
-    const musicUrl = cometData.audio_url || cometData.url || cometData.output_url;
-    
+    // Check if the response contains a task ID
+    const taskId = submitData.data || submitData.task_id || submitData.id;
+    if (!taskId) {
+      console.error('No task ID in submit response:', submitData);
+      throw new Error('No task ID returned from CometAPI');
+    }
+
+    console.log('Task submitted successfully, ID:', taskId);
+    console.log('Polling for completion...');
+
+    // Poll for task completion
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes max (5 second intervals)
+    let musicUrl = null;
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      
+      // Wait 5 seconds between polls
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      console.log(`Polling attempt ${attempts}/${maxAttempts} for task: ${taskId}`);
+      
+      try {
+        const pollResponse = await fetch(`https://api.cometapi.com/task/${taskId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${cometApiKey}`,
+          },
+        });
+
+        if (!pollResponse.ok) {
+          console.error(`Poll attempt ${attempts} failed with status:`, pollResponse.status);
+          continue;
+        }
+
+        const pollData = await pollResponse.json();
+        console.log(`Poll response ${attempts}:`, JSON.stringify(pollData));
+
+        // Check if task is completed
+        if (pollData.status === 'completed' || pollData.state === 'completed') {
+          // Look for audio URL in various possible locations
+          musicUrl = pollData.data?.audio_url || 
+                    pollData.data?.output_url || 
+                    pollData.data?.url ||
+                    pollData.audio_url || 
+                    pollData.output_url || 
+                    pollData.url;
+          
+          if (musicUrl) {
+            console.log('Music generation completed successfully, URL:', musicUrl);
+            break;
+          } else {
+            console.log('Task completed but no audio URL found in:', pollData);
+          }
+        } else if (pollData.status === 'failed' || pollData.state === 'failed') {
+          console.error('Music generation task failed:', pollData);
+          throw new Error('Music generation failed');
+        } else {
+          console.log(`Task status: ${pollData.status || pollData.state || 'unknown'}`);
+        }
+      } catch (pollError) {
+        console.error(`Poll attempt ${attempts} error:`, pollError);
+      }
+    }
+
     if (!musicUrl) {
-      console.error('No audio URL in CometAPI response:', cometData);
-      throw new Error('No audio URL returned from CometAPI');
+      throw new Error(`Music generation timed out after ${maxAttempts} attempts`);
     }
     
     return new Response(JSON.stringify({ 
@@ -69,7 +131,7 @@ serve(async (req) => {
       mood,
       status: 'ready',
       metadata: {
-        cometId: cometData.id,
+        cometId: taskId,
         generatedAt: new Date().toISOString()
       }
     }), {
