@@ -164,6 +164,20 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
             const pollData = await pollResponse.json();
             console.log(`Poll response ${attempts}:`, JSON.stringify(pollData));
 
+            // Check if any individual songs are completed
+            if (pollData.data && Array.isArray(pollData.data)) {
+              const completedSong = pollData.data.find(song => 
+                song.state === 'complete' || song.status === 'complete' || song.audio_url
+              );
+              
+              if (completedSong && completedSong.audio_url) {
+                audioUrl = completedSong.audio_url;
+                console.log('Audio with voice and music generated successfully:', audioUrl);
+                break;
+              }
+            }
+            
+            // Fallback: check overall task completion
             if (pollData.status === 'completed' || pollData.state === 'completed') {
               const completedUrl = pollData.data?.audio_url || 
                                   pollData.data?.output_url || 
