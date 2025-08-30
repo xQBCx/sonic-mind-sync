@@ -130,15 +130,55 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
     
     console.log('Audio generated successfully with OpenAI TTS');
     
-    // Update brief with ready status
-    await supabase
-      .from('briefs')
-      .update({
-        status: 'ready',
-        script,
-        audio_url: audioDataUrl,
-      })
-      .eq('id', briefId);
+    // Generate background music
+    console.log('Generating background music with CometAPI...');
+    try {
+      const musicResponse = await fetch(`${supabaseUrl}/functions/v1/generate-music`, {
+        method: 'POST',
+        headers: {
+          'Authorization': authHeader,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          mood,
+          duration: durationSec
+        }),
+      });
+      
+      let backgroundMusicUrl = null;
+      if (musicResponse.ok) {
+        const musicData = await musicResponse.json();
+        backgroundMusicUrl = musicData.musicUrl;
+        console.log('Background music generated successfully');
+      } else {
+        console.error('Music generation failed:', await musicResponse.text());
+      }
+      
+      // Update brief with ready status and music
+      await supabase
+        .from('briefs')
+        .update({
+          status: 'ready',
+          script,
+          audio_url: audioDataUrl,
+          background_music_url: backgroundMusicUrl,
+          duration_sec: durationSec
+        })
+        .eq('id', briefId);
+        
+    } catch (musicError) {
+      console.error('Music generation error:', musicError);
+      // Still mark as ready but without music
+      await supabase
+        .from('briefs')
+        .update({
+          status: 'ready',
+          script,
+          audio_url: audioDataUrl,
+          duration_sec: durationSec
+        })
+        .eq('id', briefId);
+    }
       
     console.log('Brief completed successfully');
     
