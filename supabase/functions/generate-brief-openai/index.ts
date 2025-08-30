@@ -91,93 +91,134 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
     // Update status to TTS
     await supabase.from('briefs').update({ status: 'tts', script }).eq('id', briefId);
     
-    // Generate TTS with OpenAI
-    console.log('Calling OpenAI TTS API...');
-    const ttsResponse = await fetch('https://api.openai.com/v1/audio/speech', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'tts-1',
-        input: script,
-        voice: mood === 'energy' ? 'nova' : mood === 'calm' ? 'shimmer' : 'alloy',
-        response_format: 'mp3',
-      }),
-    });
-
-    if (!ttsResponse.ok) {
-      const errorText = await ttsResponse.text();
-      console.error('OpenAI TTS error:', errorText);
-      throw new Error(`TTS failed: ${ttsResponse.status} - ${errorText}`);
+    // Generate audio with voice + music using Suno via CometAPI
+    console.log('Generating audio with voice and music using Suno via CometAPI...');
+    
+    const cometApiKey = Deno.env.get('COMET_API_KEY');
+    if (!cometApiKey) {
+      throw new Error('CometAPI key not configured');
     }
 
-    const audioBuffer = await ttsResponse.arrayBuffer();
-    
-    // Convert ArrayBuffer to base64 efficiently to avoid stack overflow
-    const uint8Array = new Uint8Array(audioBuffer);
-    let binaryString = '';
-    const chunkSize = 8192; // Process in chunks to avoid stack overflow
-    
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-      const chunk = uint8Array.subarray(i, i + chunkSize);
-      binaryString += String.fromCharCode.apply(null, Array.from(chunk));
-    }
-    
-    const audioBase64 = btoa(binaryString);
-    const audioDataUrl = `data:audio/mpeg;base64,${audioBase64}`;
-    
-    console.log('Audio generated successfully with OpenAI TTS');
-    
-    // Generate background music
-    console.log('Generating background music with CometAPI...');
+    // Create mood-specific prompts for Suno that include both voice and music
+    const moodPrompts = {
+      focus: `Create a ${Math.floor(durationSec)}-second audio piece that combines professional narration with subtle ambient background music. Narration text: "${script}". Style: Clear, informative voice with gentle synthesizers and minimal percussion for focus and concentration. The voice should be calm and professional, with the music mixed low to support without overpowering.`,
+      energy: `Generate a ${Math.floor(durationSec)}-second energetic audio experience combining dynamic narration with upbeat background music. Narration text: "${script}". Style: Enthusiastic, motivational voice with driving rhythms and inspiring melodies. The voice should be engaging and energetic, with music that complements the content.`,
+      calm: `Produce a ${Math.floor(durationSec)}-second peaceful audio piece featuring soothing narration with relaxing background music. Narration text: "${script}". Style: Warm, gentle voice with soft piano, nature sounds, and meditative tones. The voice should be calming with serene background music for relaxation.`
+    };
+
+    const sunoPrompt = moodPrompts[mood] || moodPrompts.focus;
+
     try {
-      const musicResponse = await fetch(`${supabaseUrl}/functions/v1/generate-music`, {
+      // Submit task to CometAPI for Suno generation
+      const submitResponse = await fetch('https://api.cometapi.com/suno/submit/music', {
         method: 'POST',
         headers: {
-          'Authorization': authHeader,
+          'Authorization': `Bearer ${cometApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          mood,
-          duration: durationSec
+          prompt: sunoPrompt,
+          mv: 'chirp-auk', // Suno v4.5
+          instrumental: false, // We want voice + music, not just instrumental
+          tags: `narration podcast ${mood} background-music voiceover`
         }),
       });
-      
-      let backgroundMusicUrl = null;
-      if (musicResponse.ok) {
-        const musicData = await musicResponse.json();
-        backgroundMusicUrl = musicData.musicUrl;
-        console.log('Background music generated successfully');
-      } else {
-        console.error('Music generation failed:', await musicResponse.text());
+
+      if (!submitResponse.ok) {
+        const errorText = await submitResponse.text();
+        console.error('CometAPI submit error:', errorText);
+        throw new Error(`CometAPI submit failed: ${submitResponse.status}`);
       }
+
+      const submitData = await submitResponse.json();
+      console.log('CometAPI submit response:', submitData);
+
+      const taskId = submitData.data || submitData.task_id || submitData.id;
+      if (!taskId) {
+        throw new Error('No task ID returned from CometAPI');
+      }
+
+      console.log('Task submitted successfully, ID:', taskId);
+      console.log('Polling for completion...');
+
+      // Poll for completion
+      let attempts = 0;
+      const maxAttempts = 72; // 6 minutes max (5 second intervals)
+      let audioUrl = null;
       
-      // Update brief with ready status and music
-      await supabase
-        .from('briefs')
-        .update({
-          status: 'ready',
-          script,
-          audio_url: audioDataUrl,
-          background_music_url: backgroundMusicUrl,
-          duration_sec: durationSec
-        })
-        .eq('id', briefId);
+      while (attempts < maxAttempts) {
+        attempts++;
+        await new Promise(resolve => setTimeout(resolve, 5000));
         
-    } catch (musicError) {
-      console.error('Music generation error:', musicError);
-      // Still mark as ready but without music
+        console.log(`Polling attempt ${attempts}/${maxAttempts} for task: ${taskId}`);
+        
+        try {
+          const pollResponse = await fetch(`https://api.cometapi.com/task/${taskId}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${cometApiKey}`,
+            },
+          });
+
+          if (pollResponse.ok) {
+            const pollData = await pollResponse.json();
+            console.log(`Poll response ${attempts}:`, JSON.stringify(pollData));
+
+            if (pollData.status === 'completed' || pollData.state === 'completed') {
+              const completedUrl = pollData.data?.audio_url || 
+                                  pollData.data?.output_url || 
+                                  pollData.data?.url ||
+                                  pollData.audio_url || 
+                                  pollData.output_url || 
+                                  pollData.url;
+              
+              if (completedUrl) {
+                audioUrl = completedUrl;
+                console.log('Audio with voice and music generated successfully:', audioUrl);
+                break;
+              } else {
+                console.log('Task completed but no audio URL found in response');
+              }
+            } else if (pollData.status === 'failed' || pollData.state === 'failed') {
+              throw new Error('Suno generation failed');
+            } else {
+              console.log(`Task status: ${pollData.status || pollData.state || 'unknown'}`);
+            }
+          } else {
+            console.error(`Poll attempt ${attempts} failed with status:`, pollResponse.status);
+          }
+        } catch (pollError) {
+          console.error(`Poll attempt ${attempts} error:`, pollError);
+        }
+      }
+
+      if (!audioUrl) {
+        throw new Error('Audio generation timed out');
+      }
+
+      // Update brief with completed audio
       await supabase
         .from('briefs')
         .update({
           status: 'ready',
           script,
-          audio_url: audioDataUrl,
+          audio_url: audioUrl,
           duration_sec: durationSec
         })
         .eq('id', briefId);
+
+    } catch (error) {
+      console.error('Suno generation failed:', error);
+      // Fallback to simple status update
+      await supabase
+        .from('briefs')
+        .update({
+          status: 'error',
+          error_message: `Audio generation failed: ${error.message}`,
+          script
+        })
+        .eq('id', briefId);
+      throw error;
     }
       
     console.log('Brief completed successfully');
