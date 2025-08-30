@@ -31,7 +31,7 @@ serve(async (req) => {
     console.log('Generating music with CometAPI, prompt:', prompt);
 
     // Call CometAPI to generate music through Suno
-    const cometResponse = await fetch('https://api.comet.ml/api/v1/suno/generate', {
+    const cometResponse = await fetch('https://api.cometapi.com/api/v1/suno/generate', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${cometApiKey}`,
