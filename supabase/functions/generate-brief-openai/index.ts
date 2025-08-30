@@ -14,9 +14,9 @@ interface GenerateBriefRequest {
 }
 
 // Generate audio with OpenAI TTS
-async function generateAudioOpenAI(briefId: string, mood: string, topics: string[], openaiKey: string, supabaseUrl: string, supabaseAnonKey: string, authHeader: string) {
+async function generateAudioOpenAI(briefId: string, mood: string, topics: string[], durationSec: number, openaiKey: string, supabaseUrl: string, supabaseAnonKey: string, authHeader: string) {
   try {
-    console.log('Starting OpenAI TTS generation for brief:', briefId);
+    console.log('Starting content generation for brief:', briefId, 'Duration:', durationSec);
     
     // Create a new Supabase client for background task
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -24,14 +24,69 @@ async function generateAudioOpenAI(briefId: string, mood: string, topics: string
       global: { headers: { Authorization: authHeader } },
     });
     
-    // Generate script
-    const sampleScripts = {
-      focus: `Welcome to your focus session. Today we're exploring ${topics.join(', ')}. Let's dive deep into concentration and clarity, eliminating distractions and maximizing your cognitive potential.`,
-      energy: `Get ready to energize! Today's topics include ${topics.join(', ')}. Feel the motivation building as we explore dynamic concepts that will boost your energy and drive.`,
-      calm: `Take a deep breath and relax. We'll be gently exploring ${topics.join(', ')} in a soothing manner that promotes peace and tranquility.`
-    } as Record<string, string>;
+    // Generate detailed script using OpenAI based on duration
+    const wordsPerMinute = 150; // Average speaking rate
+    const targetWords = Math.floor((durationSec / 60) * wordsPerMinute);
     
-    const script = sampleScripts[mood] || 'Welcome to your personalized briefing.';
+    console.log('Generating script with OpenAI for', targetWords, 'words');
+    
+    // Update status to summarizing
+    await supabase.from('briefs').update({ status: 'summarizing' }).eq('id', briefId);
+    
+    // Generate comprehensive script with OpenAI
+    const scriptPrompt = `Create a ${durationSec}-second (approximately ${targetWords} words) detailed, informative briefing about "${topics.join(', ')}" in a ${mood} style.
+
+For ${mood} mood:
+${mood === 'focus' ? '- Use clear, structured information that enhances concentration\n- Include specific facts, data, and actionable insights\n- Maintain a steady, professional tone' : ''}
+${mood === 'energy' ? '- Use dynamic, motivating language\n- Include exciting developments and positive outcomes\n- Build momentum throughout the briefing' : ''}
+${mood === 'calm' ? '- Use soothing, peaceful language\n- Present information in a gentle, reassuring manner\n- Focus on hope, understanding, and balanced perspectives' : ''}
+
+Structure:
+1. Brief introduction (10% of content)
+2. Main content with key points and details (75% of content)
+3. Thoughtful conclusion with takeaways (15% of content)
+
+Make this exactly ${targetWords} words to fill the ${durationSec}-second duration. Do not include any formatting, just the script text.`;
+
+    const scriptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are an expert briefing writer. Create detailed, engaging content that matches the exact word count requested.'
+          },
+          {
+            role: 'user',
+            content: scriptPrompt
+          }
+        ],
+        max_tokens: Math.min(4000, targetWords * 2), // Allow for detailed response
+        temperature: 0.7,
+      }),
+    });
+
+    let script = '';
+    if (scriptResponse.ok) {
+      const scriptData = await scriptResponse.json();
+      script = scriptData.choices[0]?.message?.content || '';
+      console.log('Generated script length:', script.length, 'characters');
+    } else {
+      console.log('OpenAI script generation failed, using fallback');
+      // Fallback script
+      script = `Welcome to your ${mood} briefing about ${topics.join(', ')}. ` +
+        `This topic is important and deserves our attention. Let's explore the key aspects, ` +
+        `understand the implications, and consider the broader context. ` +
+        `${topics.map(topic => `Regarding ${topic}, there are several important considerations to keep in mind.`).join(' ')} ` +
+        `These developments continue to evolve and impact various aspects of our world. ` +
+        `By staying informed and maintaining a ${mood} approach, we can better understand these complex issues. ` +
+        `Thank you for taking the time to stay informed about these important topics.`;
+    }
     
     // Update status to TTS
     await supabase.from('briefs').update({ status: 'tts', script }).eq('id', briefId);
@@ -188,7 +243,7 @@ serve(async (req) => {
     
     // Start background task using setTimeout to avoid blocking
     setTimeout(() => {
-      generateAudioOpenAI(brief.id, mood, topics, openaiKey, supabaseUrl, supabaseAnonKey, authHeader)
+      generateAudioOpenAI(brief.id, mood, topics, durationSec, openaiKey, supabaseUrl, supabaseAnonKey, authHeader)
         .catch(error => console.error('Background task failed:', error));
     }, 0);
 
