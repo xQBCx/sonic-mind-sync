@@ -99,11 +99,11 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
       throw new Error('CometAPI key not configured');
     }
 
-    // Create mood-specific prompts for Suno that include both voice and music
+    // Create mood-specific prompts for Suno to sing the content as a song
     const moodPrompts = {
-      focus: `Create a ${Math.floor(durationSec)}-second audio piece that combines professional narration with subtle ambient background music. Narration text: "${script}". Style: Clear, informative voice with gentle synthesizers and minimal percussion for focus and concentration. The voice should be calm and professional, with the music mixed low to support without overpowering.`,
-      energy: `Generate a ${Math.floor(durationSec)}-second energetic audio experience combining dynamic narration with upbeat background music. Narration text: "${script}". Style: Enthusiastic, motivational voice with driving rhythms and inspiring melodies. The voice should be engaging and energetic, with music that complements the content.`,
-      calm: `Produce a ${Math.floor(durationSec)}-second peaceful audio piece featuring soothing narration with relaxing background music. Narration text: "${script}". Style: Warm, gentle voice with soft piano, nature sounds, and meditative tones. The voice should be calming with serene background music for relaxation.`
+      focus: `Create a focused, educational song with clear vocals singing about: ${script}. Style: Folk-acoustic with soft guitar and light percussion, educational documentary style.`,
+      energy: `Create an energetic, upbeat song with strong vocals singing about: ${script}. Style: Pop-rock with driving beat and inspiring melody, motivational and engaging.`,
+      calm: `Create a peaceful, meditative song with gentle vocals singing about: ${script}. Style: Ambient-folk with soft piano, nature sounds, and soothing harmonies.`
     };
 
     const sunoPrompt = moodPrompts[mood] || moodPrompts.focus;
@@ -119,8 +119,8 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
         body: JSON.stringify({
           prompt: sunoPrompt,
           mv: 'chirp-auk', // Suno v4.5
-          instrumental: false, // We want voice + music, not just instrumental
-          tags: `narration podcast ${mood} background-music voiceover`
+          instrumental: false, // We want vocals + music
+          tags: `educational ${mood} song vocal melody music`
         }),
       });
 
