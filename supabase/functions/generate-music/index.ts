@@ -14,12 +14,12 @@ serve(async (req) => {
   try {
     const { mood, duration } = await req.json();
     
-    const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-      throw new Error('OpenAI API key not configured');
+    const cometApiKey = Deno.env.get('COMET_API_KEY');
+    if (!cometApiKey) {
+      throw new Error('CometAPI key not configured');
     }
 
-    // Generate music based on mood using OpenAI
+    // Generate music based on mood using CometAPI -> Suno pipeline
     const musicPrompts = {
       focus: `Create a ${duration}-second ambient electronic track with subtle synthesizer pads, minimal percussion, and flowing melodies that enhance concentration and mental clarity`,
       energy: `Generate a ${duration}-second upbeat electronic music track with driving beats, motivational rhythms, and energizing synthesizers that boost motivation and energy`,
@@ -28,18 +28,49 @@ serve(async (req) => {
 
     const prompt = musicPrompts[mood] || musicPrompts.focus;
 
-    // For now, we'll use a music generation API placeholder
-    // In production, you'd integrate with Suno AI, Mubert, or similar
-    console.log('Generating music with prompt:', prompt);
+    console.log('Generating music with CometAPI, prompt:', prompt);
+
+    // Call CometAPI to generate music through Suno
+    const cometResponse = await fetch('https://api.comet.ml/api/v1/suno/generate', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${cometApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: prompt,
+        duration: duration,
+        make_instrumental: true, // For background music
+        wait_audio: true // Wait for audio generation to complete
+      }),
+    });
+
+    if (!cometResponse.ok) {
+      const errorText = await cometResponse.text();
+      console.error('CometAPI error:', errorText);
+      throw new Error(`CometAPI request failed: ${cometResponse.status}`);
+    }
+
+    const cometData = await cometResponse.json();
+    console.log('CometAPI response:', cometData);
+
+    // Extract the audio URL from the response
+    const musicUrl = cometData.audio_url || cometData.url || cometData.output_url;
     
-    // Placeholder response - replace with actual music generation
-    const musicUrl = `/sample.mp3`; // This should be replaced with generated music
+    if (!musicUrl) {
+      console.error('No audio URL in CometAPI response:', cometData);
+      throw new Error('No audio URL returned from CometAPI');
+    }
     
     return new Response(JSON.stringify({ 
       musicUrl,
       duration,
       mood,
-      status: 'ready'
+      status: 'ready',
+      metadata: {
+        cometId: cometData.id,
+        generatedAt: new Date().toISOString()
+      }
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
