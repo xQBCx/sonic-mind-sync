@@ -31,7 +31,7 @@ serve(async (req) => {
     console.log('Generating music with CometAPI, prompt:', prompt);
 
     // Call CometAPI to generate music through Suno
-    const cometResponse = await fetch('https://api.cometapi.com/api/v1/suno/generate', {
+    const cometResponse = await fetch('https://api.cometapi.com/suno/submit/music', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${cometApiKey}`,
@@ -39,9 +39,10 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         prompt: prompt,
-        duration: duration,
-        make_instrumental: true, // For background music
-        wait_audio: true // Wait for audio generation to complete
+        mv: 'chirp-auk', // Suno v4.5
+        instrumental: true, // For background music
+        wait_audio: true, // Wait for audio generation to complete
+        tags: 'instrumental background music'
       }),
     });
 
