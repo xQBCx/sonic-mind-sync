@@ -153,7 +153,7 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
         console.log(`Polling attempt ${attempts}/${maxAttempts} for task: ${taskId}`);
         
         try {
-          const pollResponse = await fetch(`https://api.cometapi.com/suno/task/${taskId}`, {
+          const pollResponse = await fetch(`https://api.cometapi.com/task/${taskId}`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${cometApiKey}`,
