@@ -178,6 +178,25 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
                   )) {
                     audioUrl = song.audio_url;
                     console.log('Found ready audio URL:', audioUrl);
+                    
+                    // Update database immediately when we find a ready URL
+                    console.log('Updating database immediately with audio URL...');
+                    const { error: immediateUpdateError } = await supabase
+                      .from('briefs')
+                      .update({
+                        status: 'ready',
+                        script,
+                        audio_url: audioUrl,
+                        duration_sec: durationSec
+                      })
+                      .eq('id', briefId);
+                    
+                    if (immediateUpdateError) {
+                      console.error('Immediate database update error:', immediateUpdateError);
+                    } else {
+                      console.log('Brief updated successfully with audio URL');
+                      return; // Exit the polling function
+                    }
                     break;
                   }
                 }
