@@ -166,12 +166,25 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
 
             // Check if any individual songs are completed
             if (pollData.data && Array.isArray(pollData.data)) {
-              const completedSong = pollData.data.find(song => 
-                song.state === 'complete' || song.status === 'complete' || song.audio_url
-              );
+              for (const song of pollData.data) {
+                console.log('Checking song:', JSON.stringify(song, null, 2));
+                
+                // Check for completed state and audio URL
+                if ((song.state === 'complete' || song.status === 'complete') && song.audio_url) {
+                  audioUrl = song.audio_url;
+                  console.log('Found completed audio URL:', audioUrl);
+                  break;
+                }
+                
+                // Also check if streaming is complete and has audio_url
+                if (song.status === 'streaming' && song.audio_url) {
+                  audioUrl = song.audio_url;
+                  console.log('Found streaming audio URL:', audioUrl);
+                  break;
+                }
+              }
               
-              if (completedSong && completedSong.audio_url) {
-                audioUrl = completedSong.audio_url;
+              if (audioUrl) {
                 console.log('Audio with voice and music generated successfully:', audioUrl);
                 break;
               }
