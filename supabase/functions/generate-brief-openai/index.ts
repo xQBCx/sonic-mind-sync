@@ -141,98 +141,107 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
       console.log('Task submitted successfully, ID:', taskId);
       console.log('Polling for completion...');
 
-      // Poll for completion
-      let attempts = 0;
-      const maxAttempts = 72; // 6 minutes max (5 second intervals)
-      let audioUrl = null;
-      
-      while (attempts < maxAttempts) {
-        attempts++;
-        await new Promise(resolve => setTimeout(resolve, 5000));
+      // Poll for completion with background processing
+      async function pollAndUpdate() {
+        let attempts = 0;
+        const maxAttempts = 36; // 3 minutes max (5 second intervals)
+        let audioUrl = null;
         
-        console.log(`Polling attempt ${attempts}/${maxAttempts} for task: ${taskId}`);
-        
-        try {
-          const pollResponse = await fetch(`https://api.cometapi.com/suno/fetch/${taskId}`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${cometApiKey}`,
-            },
-          });
+        while (attempts < maxAttempts) {
+          attempts++;
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          
+          console.log(`Polling attempt ${attempts}/${maxAttempts} for task: ${taskId}`);
+          
+          try {
+            const pollResponse = await fetch(`https://api.cometapi.com/suno/fetch/${taskId}`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${cometApiKey}`,
+              },
+            });
 
-          if (pollResponse.ok) {
-            const pollData = await pollResponse.json();
-            console.log(`Poll response ${attempts}:`, JSON.stringify(pollData));
+            if (pollResponse.ok) {
+              const pollData = await pollResponse.json();
+              console.log(`Poll response ${attempts}:`, JSON.stringify(pollData, null, 2));
 
-            // Check if any individual songs are completed
-            if (pollData.data && Array.isArray(pollData.data)) {
-              for (const song of pollData.data) {
-                console.log('Checking song:', JSON.stringify(song, null, 2));
-                
-                // Check for completed state and audio URL
-                if ((song.state === 'complete' || song.status === 'complete') && song.audio_url) {
-                  audioUrl = song.audio_url;
-                  console.log('Found completed audio URL:', audioUrl);
-                  break;
+              // Check if any individual songs are ready
+              if (pollData.data && Array.isArray(pollData.data)) {
+                for (const song of pollData.data) {
+                  console.log('Checking song status:', song.status, 'state:', song.state, 'has audio_url:', !!song.audio_url);
+                  
+                  // Accept streaming songs with audio URLs as ready
+                  if (song.audio_url && (
+                    song.state === 'complete' || 
+                    song.status === 'complete' || 
+                    song.status === 'streaming'
+                  )) {
+                    audioUrl = song.audio_url;
+                    console.log('Found ready audio URL:', audioUrl);
+                    break;
+                  }
                 }
                 
-                // Also check if streaming is complete and has audio_url
-                if (song.status === 'streaming' && song.audio_url) {
-                  audioUrl = song.audio_url;
-                  console.log('Found streaming audio URL:', audioUrl);
-                  break;
+                if (audioUrl) {
+                  console.log('Audio generation completed, updating database...');
+                  
+                  // Update the database
+                  const { error: updateError } = await supabase
+                    .from('briefs')
+                    .update({
+                      status: 'ready',
+                      script,
+                      audio_url: audioUrl,
+                      duration_sec: durationSec
+                    })
+                    .eq('id', briefId);
+                  
+                  if (updateError) {
+                    console.error('Database update error:', updateError);
+                    throw updateError;
+                  }
+                  
+                  console.log('Brief updated successfully with audio URL');
+                  return;
                 }
               }
               
-              if (audioUrl) {
-                console.log('Audio with voice and music generated successfully:', audioUrl);
-                break;
+              // Check if task failed
+              if (pollData.status === 'failed' || pollData.state === 'failed') {
+                throw new Error('Suno generation failed');
               }
-            }
-            
-            // Fallback: check overall task completion
-            if (pollData.status === 'completed' || pollData.state === 'completed') {
-              const completedUrl = pollData.data?.audio_url || 
-                                  pollData.data?.output_url || 
-                                  pollData.data?.url ||
-                                  pollData.audio_url || 
-                                  pollData.output_url || 
-                                  pollData.url;
               
-              if (completedUrl) {
-                audioUrl = completedUrl;
-                console.log('Audio with voice and music generated successfully:', audioUrl);
-                break;
-              } else {
-                console.log('Task completed but no audio URL found in response');
-              }
-            } else if (pollData.status === 'failed' || pollData.state === 'failed') {
-              throw new Error('Suno generation failed');
             } else {
-              console.log(`Task status: ${pollData.status || pollData.state || 'unknown'}`);
+              console.error(`Poll attempt ${attempts} failed with status:`, pollResponse.status);
             }
-          } else {
-            console.error(`Poll attempt ${attempts} failed with status:`, pollResponse.status);
+          } catch (pollError) {
+            console.error(`Poll attempt ${attempts} error:`, pollError);
           }
-        } catch (pollError) {
-          console.error(`Poll attempt ${attempts} error:`, pollError);
         }
+
+        // If we get here, it timed out
+        console.error('Audio generation timed out');
+        await supabase
+          .from('briefs')
+          .update({
+            status: 'error',
+            error_message: 'Audio generation timed out',
+            script
+          })
+          .eq('id', briefId);
       }
 
-      if (!audioUrl) {
-        throw new Error('Audio generation timed out');
+      // Use background task to avoid function timeout
+      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
+        EdgeRuntime.waitUntil(pollAndUpdate());
+      } else {
+        // Fallback for environments without EdgeRuntime
+        setTimeout(() => {
+          pollAndUpdate().catch(error => {
+            console.error('Background polling failed:', error);
+          });
+        }, 0);
       }
-
-      // Update brief with completed audio
-      await supabase
-        .from('briefs')
-        .update({
-          status: 'ready',
-          script,
-          audio_url: audioUrl,
-          duration_sec: durationSec
-        })
-        .eq('id', briefId);
 
     } catch (error) {
       console.error('Suno generation failed:', error);
