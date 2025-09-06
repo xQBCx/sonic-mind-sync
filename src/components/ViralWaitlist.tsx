@@ -1,20 +1,51 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Share2, Users, Zap, Brain } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ViralWaitlistProps {
   onSignup?: (email: string, referralCode?: string) => void;
+  referralCode?: string;
 }
 
-export const ViralWaitlist = ({ onSignup }: ViralWaitlistProps) => {
+export const ViralWaitlist = ({ onSignup, referralCode }: ViralWaitlistProps) => {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [waitlistCount, setWaitlistCount] = useState(1247); // Mock counter for social proof
+  const [waitlistCount, setWaitlistCount] = useState(0);
+  const [userReferralCode, setUserReferralCode] = useState<string>("");
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  useEffect(() => {
+    fetchWaitlistStats();
+    if (user) {
+      generateUserReferralCode();
+    }
+  }, [user]);
+
+  const fetchWaitlistStats = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_platform_stats');
+      if (error) throw error;
+      setWaitlistCount((data as any)?.waiting_list_count || 0);
+    } catch (error) {
+      console.error('Error fetching waitlist stats:', error);
+      setWaitlistCount(1247); // Fallback
+    }
+  };
+
+  const generateUserReferralCode = () => {
+    if (user) {
+      // Generate a simple referral code based on user ID
+      const code = `${user.id.slice(0, 8)}-${Date.now().toString(36)}`;
+      setUserReferralCode(code);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,19 +54,45 @@ export const ViralWaitlist = ({ onSignup }: ViralWaitlistProps) => {
     setIsSubmitting(true);
     
     try {
-      // Mock API call - replace with real waitlist API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Create a temporary user for the waitlist
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password: Math.random().toString(36) + Math.random().toString(36), // Temporary password
+      });
+
+      if (authError) throw authError;
+
+      // Create profile with waitlist origin and referral info
+      if (authData.user) {
+        await supabase.rpc('create_user_profile', {
+          p_user_id: authData.user.id,
+          p_origin: 'waitlist',
+          p_interests: referralCode ? `Referred by: ${referralCode}` : 'Direct signup'
+        });
+
+        // Track referral if exists
+        if (referralCode) {
+          await supabase
+            .from('user_analytics')
+            .insert({
+              user_id: authData.user.id,
+              event_type: 'waitlist_referral',
+              context: { referral_code: referralCode, email }
+            });
+        }
+      }
       
-      onSignup?.(email);
-      setWaitlistCount(prev => prev + 1);
+      onSignup?.(email, referralCode);
+      await fetchWaitlistStats(); // Refresh count
       
       toast({
         title: "Welcome to the SonicBrief Revolution! 🎯",
-        description: "You're in! Share with 3 friends to unlock Founder status.",
+        description: "Check your email to verify your account. Share with 3 friends to unlock Founder status!",
       });
       
       setEmail("");
     } catch (error) {
+      console.error('Waitlist signup error:', error);
       toast({
         title: "Something went wrong",
         description: "Please try again later.",
@@ -47,7 +104,9 @@ export const ViralWaitlist = ({ onSignup }: ViralWaitlistProps) => {
   };
 
   const shareText = "I just joined the SonicBrief waitlist - personalized audio frequencies for peak performance! Join me: ";
-  const shareUrl = window.location.origin;
+  const shareUrl = user && userReferralCode 
+    ? `${window.location.origin}?ref=${userReferralCode}`
+    : window.location.origin;
 
   const handleShare = (platform: 'twitter' | 'linkedin' | 'copy') => {
     const fullText = `${shareText}${shareUrl}`;

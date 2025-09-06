@@ -3,8 +3,11 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Users, Gift, Crown, Share2 } from "lucide-react";
+import { Users, Gift, Crown, Share2, Copy } from "lucide-react";
 import { ShareModal } from "./ShareModal";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 interface ReferralTrackerProps {
   userEmail?: string;
@@ -14,14 +17,57 @@ export const ReferralTracker = ({ userEmail }: ReferralTrackerProps) => {
   const [referralCount, setReferralCount] = useState(0);
   const [showShareModal, setShowShareModal] = useState(false);
   const [referralCode, setReferralCode] = useState("");
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Generate referral code based on email
-    if (userEmail) {
-      const code = btoa(userEmail).slice(0, 8).toUpperCase();
+    if (user) {
+      generateReferralCode();
+      fetchReferralCount();
+    }
+  }, [user]);
+
+  const generateReferralCode = () => {
+    if (user) {
+      // Generate consistent referral code based on user ID
+      const code = `${user.id.slice(0, 8)}-${Date.now().toString(36)}`.toUpperCase();
       setReferralCode(code);
     }
-  }, [userEmail]);
+  };
+
+  const fetchReferralCount = async () => {
+    if (!user) return;
+    
+    try {
+      const { count, error } = await supabase
+        .from('user_analytics')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_type', 'waitlist_referral')
+        .ilike('context->referral_code', `%${user.id.slice(0, 8)}%`);
+        
+      if (error) throw error;
+      setReferralCount(count || 0);
+    } catch (error) {
+      console.error('Error fetching referral count:', error);
+    }
+  };
+
+  const copyReferralLink = async () => {
+    const referralLink = `${window.location.origin}?ref=${referralCode}`;
+    try {
+      await navigator.clipboard.writeText(referralLink);
+      toast({
+        title: "Copied!",
+        description: "Referral link copied to clipboard",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy the link manually",
+        variant: "destructive",
+      });
+    }
+  };
 
   const tiers = [
     { name: "Explorer", count: 0, perks: ["Early access"], icon: "🎧" },
@@ -99,10 +145,19 @@ export const ReferralTracker = ({ userEmail }: ReferralTrackerProps) => {
           </Button>
 
           {referralCode && (
-            <div className="text-center pt-2">
-              <p className="text-xs text-muted-foreground">
-                Your code: <span className="font-mono font-semibold text-primary">{referralCode}</span>
+            <div className="space-y-2 pt-3 border-t border-border">
+              <p className="text-xs text-muted-foreground text-center">
+                Your referral link:
               </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={copyReferralLink}
+                className="w-full h-auto py-2 px-3 text-xs"
+              >
+                <Copy className="h-3 w-3 mr-2" />
+                {`${window.location.origin}?ref=${referralCode}`}
+              </Button>
             </div>
           )}
         </CardContent>

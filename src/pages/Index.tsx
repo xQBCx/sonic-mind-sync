@@ -13,9 +13,20 @@ import { RealTestimonials } from "@/components/RealTestimonials";
 import { TestimonialForm } from "@/components/TestimonialForm";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const [referralCode, setReferralCode] = useState<string>("");
+
+  useEffect(() => {
+    // Extract referral code from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const ref = urlParams.get('ref');
+    if (ref) {
+      setReferralCode(ref);
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -46,7 +57,7 @@ const Index = () => {
             <RealTestimonials />
           </div>
           <div className="container mx-auto px-4 py-8 sm:py-16">
-            <ViralWaitlist />
+            <ViralWaitlist referralCode={referralCode} />
           </div>
           <div className="container mx-auto px-4 py-8 sm:py-16">
             <TestimonialForm />
