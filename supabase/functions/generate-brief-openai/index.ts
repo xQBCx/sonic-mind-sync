@@ -14,7 +14,7 @@ interface GenerateBriefRequest {
 }
 
 // Generate audio with OpenAI TTS
-async function generateAudioOpenAI(briefId: string, mood: string, topics: string[], durationSec: number, openaiKey: string, supabaseUrl: string, supabaseAnonKey: string, authHeader: string) {
+async function generateAudioOpenAI(briefId: string, mood: string, topics: string[], durationSec: number, openaiKey: string, cometApiKey: string, supabaseUrl: string, supabaseAnonKey: string, authHeader: string) {
   try {
     console.log('Starting content generation for brief:', briefId, 'Duration:', durationSec);
     
@@ -298,26 +298,41 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
 }
 
 serve(async (req) => {
+  const startTime = Date.now();
+  console.log('=== OPENAI TTS FUNCTION START ===', new Date().toISOString());
+  console.log('Request method:', req.method);
+  console.log('Request URL:', req.url);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling CORS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('=== OPENAI TTS FUNCTION START ===');
+    console.log('=== PROCESSING MAIN REQUEST ===');
     
     // Check environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    const cometApiKey = Deno.env.get('COMET_API_KEY');
+    
     
     console.log('Environment check:');
     console.log('- SUPABASE_URL present:', !!supabaseUrl);
     console.log('- SUPABASE_ANON_KEY present:', !!supabaseAnonKey);
     console.log('- OPENAI_API_KEY present:', !!openaiKey);
+    console.log('- COMET_API_KEY present:', !!cometApiKey);
     
-    if (!supabaseUrl || !supabaseAnonKey || !openaiKey) {
-      console.error('Missing required environment variables');
+    
+    if (!supabaseUrl || !supabaseAnonKey || !openaiKey || !cometApiKey) {
+      console.error('Missing required environment variables:', {
+        supabaseUrl: !!supabaseUrl,
+        supabaseAnonKey: !!supabaseAnonKey,
+        openaiKey: !!openaiKey,
+        cometApiKey: !!cometApiKey
+      });
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -326,7 +341,9 @@ serve(async (req) => {
 
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
+    console.log('Authorization header present:', !!authHeader);
     if (!authHeader) {
+      console.error('No authorization header provided');
       return new Response(JSON.stringify({ error: 'Authentication required' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -340,17 +357,22 @@ serve(async (req) => {
     });
 
     // Verify user authentication
+    console.log('Verifying user authentication...');
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
+      console.error('Authentication failed:', authError);
       return new Response(JSON.stringify({ error: 'Authentication failed' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    console.log('User authenticated successfully:', user.id);
 
     // Parse request body
+    console.log('Parsing request body...');
     const requestBody = await req.json();
     const { mood, topics, durationSec } = requestBody;
+    console.log('Request parameters:', { mood, topics, durationSec });
 
     // Insert brief into database
     const briefData = {
@@ -377,11 +399,31 @@ serve(async (req) => {
 
     console.log('Brief created successfully:', brief.id);
     
-    // Start background task using setTimeout to avoid blocking
-    setTimeout(() => {
-      generateAudioOpenAI(brief.id, mood, topics, durationSec, openaiKey, supabaseUrl, supabaseAnonKey, authHeader)
-        .catch(error => console.error('Background task failed:', error));
-    }, 0);
+    // Start background task using EdgeRuntime.waitUntil for proper execution
+    const backgroundTask = generateAudioOpenAI(
+      brief.id, 
+      mood, 
+      topics, 
+      durationSec, 
+      openaiKey, 
+      cometApiKey,
+      supabaseUrl, 
+      supabaseAnonKey, 
+      authHeader
+    );
+    
+    EdgeRuntime.waitUntil(backgroundTask.catch(error => {
+      console.error('Background task failed:', error);
+      // Update brief status to error in database
+      const errorSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+        global: { headers: { Authorization: authHeader } },
+      });
+      errorSupabase.from('briefs')
+        .update({ status: 'error', error_message: error.message })
+        .eq('id', brief.id)
+        .then(() => console.log('Brief status updated to error'));
+    }));
 
     // Return immediate response
     return new Response(JSON.stringify({ 
