@@ -13,8 +13,8 @@ interface GenerateBriefRequest {
   durationSec: number;
 }
 
-// Generate audio with OpenAI TTS
-async function generateAudioOpenAI(briefId: string, mood: string, topics: string[], durationSec: number, openaiKey: string, cometApiKey: string, supabaseUrl: string, supabaseAnonKey: string, authHeader: string) {
+// Generate script and compose audio
+async function generateAudioOpenAI(briefId: string, mood: string, topics: string[], durationSec: number, openaiKey: string, supabaseUrl: string, supabaseAnonKey: string, authHeader: string) {
   try {
     console.log('Starting content generation for brief:', briefId, 'Duration:', durationSec);
     
@@ -91,185 +91,35 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
     // Update status to TTS
     await supabase.from('briefs').update({ status: 'tts', script }).eq('id', briefId);
     
-    // Generate audio with voice + music using Suno via CometAPI
-    console.log('Generating audio with voice and music using Suno via CometAPI...');
+    // Call the composer to generate audio (TTS + loops + binaural)
+    console.log('Calling composer to generate audio...');
     
-    const cometApiKey = Deno.env.get('COMET_API_KEY');
-    if (!cometApiKey) {
-      throw new Error('CometAPI key not configured');
-    }
-
-    // Create mood-specific prompts for Suno to sing the content as a song
-    const moodPrompts = {
-      focus: `Create a focused, educational song with clear vocals singing about: ${script}. Style: Folk-acoustic with soft guitar and light percussion, educational documentary style.`,
-      energy: `Create an energetic, upbeat song with strong vocals singing about: ${script}. Style: Pop-rock with driving beat and inspiring melody, motivational and engaging.`,
-      calm: `Create a peaceful, meditative song with gentle vocals singing about: ${script}. Style: Ambient-folk with soft piano, nature sounds, and soothing harmonies.`
-    };
-
-    const sunoPrompt = moodPrompts[mood] || moodPrompts.focus;
-
     try {
-      // Submit task to CometAPI for Suno generation
-      const submitResponse = await fetch('https://api.cometapi.com/suno/submit/music', {
+      const composerResponse = await fetch(`${supabaseUrl}/functions/v1/composer`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${cometApiKey}`,
+          'Authorization': authHeader,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          prompt: sunoPrompt,
-          mv: 'chirp-auk', // Suno v4.5
-          instrumental: false, // We want vocals + music
-          tags: `educational ${mood} song vocal melody music`
-        }),
+        body: JSON.stringify({ briefId }),
       });
 
-      if (!submitResponse.ok) {
-        const errorText = await submitResponse.text();
-        console.error('CometAPI submit error:', errorText);
-        throw new Error(`CometAPI submit failed: ${submitResponse.status}`);
+      if (!composerResponse.ok) {
+        const errorText = await composerResponse.text();
+        console.error('Composer error:', errorText);
+        throw new Error(`Composer failed: ${composerResponse.status}`);
       }
 
-      const submitData = await submitResponse.json();
-      console.log('CometAPI submit response:', submitData);
-
-      const taskId = submitData.data || submitData.task_id || submitData.id;
-      if (!taskId) {
-        throw new Error('No task ID returned from CometAPI');
-      }
-
-      console.log('Task submitted successfully, ID:', taskId);
-      console.log('Polling for completion...');
-
-      // Poll for completion with background processing
-      async function pollAndUpdate() {
-        let attempts = 0;
-        const maxAttempts = 36; // 3 minutes max (5 second intervals)
-        let audioUrl = null;
-        
-        while (attempts < maxAttempts) {
-          attempts++;
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          
-          console.log(`Polling attempt ${attempts}/${maxAttempts} for task: ${taskId}`);
-          
-          try {
-            const pollResponse = await fetch(`https://api.cometapi.com/suno/fetch/${taskId}`, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${cometApiKey}`,
-              },
-            });
-
-            if (pollResponse.ok) {
-              const pollData = await pollResponse.json();
-              console.log(`Poll response ${attempts}:`, JSON.stringify(pollData, null, 2));
-
-              // Check if any individual songs are ready
-              if (pollData.data && Array.isArray(pollData.data)) {
-                for (const song of pollData.data) {
-                  console.log('Checking song status:', song.status, 'state:', song.state, 'has audio_url:', !!song.audio_url);
-                  
-                  // Accept streaming songs with audio URLs as ready
-                  if (song.audio_url && (
-                    song.state === 'complete' || 
-                    song.status === 'complete' || 
-                    song.status === 'streaming'
-                  )) {
-                    audioUrl = song.audio_url;
-                    console.log('Found ready audio URL:', audioUrl);
-                    
-                    // Update database immediately when we find a ready URL
-                    console.log('Updating database immediately with audio URL...');
-                    const { error: immediateUpdateError } = await supabase
-                      .from('briefs')
-                      .update({
-                        status: 'ready',
-                        script,
-                        audio_url: audioUrl,
-                        duration_sec: durationSec
-                      })
-                      .eq('id', briefId);
-                    
-                    if (immediateUpdateError) {
-                      console.error('Immediate database update error:', immediateUpdateError);
-                    } else {
-                      console.log('Brief updated successfully with audio URL');
-                      return; // Exit the polling function
-                    }
-                    break;
-                  }
-                }
-                
-                if (audioUrl) {
-                  console.log('Audio generation completed, updating database...');
-                  
-                  // Update the database
-                  const { error: updateError } = await supabase
-                    .from('briefs')
-                    .update({
-                      status: 'ready',
-                      script,
-                      audio_url: audioUrl,
-                      duration_sec: durationSec
-                    })
-                    .eq('id', briefId);
-                  
-                  if (updateError) {
-                    console.error('Database update error:', updateError);
-                    throw updateError;
-                  }
-                  
-                  console.log('Brief updated successfully with audio URL');
-                  return;
-                }
-              }
-              
-              // Check if task failed
-              if (pollData.status === 'failed' || pollData.state === 'failed') {
-                throw new Error('Suno generation failed');
-              }
-              
-            } else {
-              console.error(`Poll attempt ${attempts} failed with status:`, pollResponse.status);
-            }
-          } catch (pollError) {
-            console.error(`Poll attempt ${attempts} error:`, pollError);
-          }
-        }
-
-        // If we get here, it timed out
-        console.error('Audio generation timed out');
-        await supabase
-          .from('briefs')
-          .update({
-            status: 'error',
-            error_message: 'Audio generation timed out',
-            script
-          })
-          .eq('id', briefId);
-      }
-
-      // Use background task to avoid function timeout
-      if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) {
-        EdgeRuntime.waitUntil(pollAndUpdate());
-      } else {
-        // Fallback for environments without EdgeRuntime
-        setTimeout(() => {
-          pollAndUpdate().catch(error => {
-            console.error('Background polling failed:', error);
-          });
-        }, 0);
-      }
+      const composerData = await composerResponse.json();
+      console.log('Composer completed:', composerData);
 
     } catch (error) {
-      console.error('Suno generation failed:', error);
-      // Fallback to simple status update
+      console.error('Composer failed:', error);
       await supabase
         .from('briefs')
         .update({
           status: 'error',
-          error_message: `Audio generation failed: ${error.message}`,
+          error_message: `Audio composition failed: ${error.message}`,
           script
         })
         .eq('id', briefId);
@@ -316,22 +166,17 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const openaiKey = Deno.env.get('OPENAI_API_KEY');
-    const cometApiKey = Deno.env.get('COMET_API_KEY');
-    
     
     console.log('Environment check:');
     console.log('- SUPABASE_URL present:', !!supabaseUrl);
     console.log('- SUPABASE_ANON_KEY present:', !!supabaseAnonKey);
     console.log('- OPENAI_API_KEY present:', !!openaiKey);
-    console.log('- COMET_API_KEY present:', !!cometApiKey);
     
-    
-    if (!supabaseUrl || !supabaseAnonKey || !openaiKey || !cometApiKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !openaiKey) {
       console.error('Missing required environment variables:', {
         supabaseUrl: !!supabaseUrl,
         supabaseAnonKey: !!supabaseAnonKey,
-        openaiKey: !!openaiKey,
-        cometApiKey: !!cometApiKey
+        openaiKey: !!openaiKey
       });
       return new Response(JSON.stringify({ error: 'Server configuration error' }), {
         status: 500,
@@ -405,8 +250,7 @@ serve(async (req) => {
       mood, 
       topics, 
       durationSec, 
-      openaiKey, 
-      cometApiKey,
+      openaiKey,
       supabaseUrl, 
       supabaseAnonKey, 
       authHeader

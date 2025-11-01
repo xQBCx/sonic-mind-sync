@@ -125,6 +125,45 @@ export type Database = {
         }
         Relationships: []
       }
+      loop_assets: {
+        Row: {
+          bpm: number | null
+          created_at: string | null
+          duration_sec: number
+          id: string
+          key: string | null
+          license: string
+          mood: string[]
+          path: string
+          sha256: string
+          type: string
+        }
+        Insert: {
+          bpm?: number | null
+          created_at?: string | null
+          duration_sec: number
+          id?: string
+          key?: string | null
+          license: string
+          mood: string[]
+          path: string
+          sha256: string
+          type: string
+        }
+        Update: {
+          bpm?: number | null
+          created_at?: string | null
+          duration_sec?: number
+          id?: string
+          key?: string | null
+          license?: string
+          mood?: string[]
+          path?: string
+          sha256?: string
+          type?: string
+        }
+        Relationships: []
+      }
       personalization_insights: {
         Row: {
           confidence_score: number | null
@@ -190,6 +229,44 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      renders: {
+        Row: {
+          brief_id: string | null
+          created_at: string | null
+          diagnostics: Json | null
+          id: string
+          method: string
+          peak_db: number | null
+          url: string
+        }
+        Insert: {
+          brief_id?: string | null
+          created_at?: string | null
+          diagnostics?: Json | null
+          id?: string
+          method?: string
+          peak_db?: number | null
+          url: string
+        }
+        Update: {
+          brief_id?: string | null
+          created_at?: string | null
+          diagnostics?: Json | null
+          id?: string
+          method?: string
+          peak_db?: number | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renders_brief_id_fkey"
+            columns: ["brief_id"]
+            isOneToOne: false
+            referencedRelation: "briefs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       schedules: {
         Row: {
@@ -392,10 +469,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      get_platform_stats: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      get_platform_stats: { Args: never; Returns: Json }
       track_user_event: {
         Args: {
           p_brief_id?: string

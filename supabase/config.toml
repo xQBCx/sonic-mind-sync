@@ -75,3 +75,6 @@ verify_jwt = true
 
 [functions.scheduled-brief-generator]
 verify_jwt = true
+
+[functions.composer]
+verify_jwt = false
