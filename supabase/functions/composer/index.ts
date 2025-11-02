@@ -155,6 +155,7 @@ async function generateTTS(apiKey: string, text: string): Promise<ArrayBuffer> {
       input: text.slice(0, 4000), // Limit to 4k chars
       voice: "alloy",
       response_format: "wav",
+      speed: 0.95, // Slightly slower for meditation-like feel
     }),
   });
 
@@ -168,7 +169,7 @@ async function generateTTS(apiKey: string, text: string): Promise<ArrayBuffer> {
 
 // Generate simple binaural sine waves
 function generateBinauralWav(mood: string, durationSec: number): ArrayBuffer {
-  const sampleRate = 48000;
+  const sampleRate = 16000; // Reduced from 48000 to save memory
   const numSamples = sampleRate * durationSec;
   
   // Carrier frequencies for binaural beats
@@ -244,6 +245,8 @@ function simpleMix(
     binPCM.length
   );
   
+  console.log(`[composer] Mixing ${maxLen} samples (${(maxLen / 16000 / 2).toFixed(1)}s)`);
+  
   // Mix at fixed volumes: VO 100%, loops 40%, binaural 30%
   const mixed = new Int16Array(maxLen);
   
@@ -272,7 +275,7 @@ function simpleMix(
   }
   
   // Wrap in WAV
-  return createWav(mixed, 48000, 2);
+  return createWav(mixed, 16000, 2);
 }
 
 // Extract PCM samples from WAV
@@ -308,7 +311,7 @@ function extractPCM(wav: ArrayBuffer): Int16Array {
 }
 
 // Create WAV from PCM
-function createWav(pcm: Int16Array, sampleRate: number, channels: number): ArrayBuffer {
+function createWav(pcm: Int16Array, sampleRate: number = 16000, channels: number = 2): ArrayBuffer {
   const dataSize = pcm.length * 2;
   const buffer = new ArrayBuffer(44 + dataSize);
   const view = new DataView(buffer);

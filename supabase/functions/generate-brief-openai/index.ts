@@ -33,20 +33,25 @@ async function generateAudioOpenAI(briefId: string, mood: string, topics: string
     // Update status to summarizing
     await supabase.from('briefs').update({ status: 'summarizing' }).eq('id', briefId);
     
-    // Generate comprehensive script with OpenAI
-    const scriptPrompt = `Create a ${durationSec}-second (approximately ${targetWords} words) detailed, informative briefing about "${topics.join(', ')}" in a ${mood} style.
+    // Generate experiential audio script with OpenAI
+    const scriptPrompt = `Create an immersive, experiential ${durationSec}-second (approximately ${targetWords} words) audio experience for "${topics.join(', ')}" in a ${mood} style.
+
+CRITICAL: This is NOT educational content. The user wants to EXPERIENCE ${mood}, not learn ABOUT ${mood}.
 
 For ${mood} mood:
-${mood === 'focus' ? '- Use clear, structured information that enhances concentration\n- Include specific facts, data, and actionable insights\n- Maintain a steady, professional tone' : ''}
-${mood === 'energy' ? '- Use dynamic, motivating language\n- Include exciting developments and positive outcomes\n- Build momentum throughout the briefing' : ''}
-${mood === 'calm' ? '- Use soothing, peaceful language\n- Present information in a gentle, reassuring manner\n- Focus on hope, understanding, and balanced perspectives' : ''}
+${mood === 'focus' ? '- Guide them into sharp mental clarity: "Notice your mind becoming crystal clear..."\n- Use present-tense affirmations: "You are focused. Each thought becomes precise..."\n- Create sensory awareness of concentration' : ''}
+${mood === 'energy' ? '- Build dynamic momentum: "Feel energy rising through your body..."\n- Use power affirmations: "You are unstoppable. Your strength grows..."\n- Create vibrant, activating sensory experiences' : ''}
+${mood === 'calm' ? '- Create deep relaxation: "With each breath, tension melts away..."\n- Use soothing affirmations: "You are at peace. Everything flows effortlessly..."\n- Build serene, peaceful sensory awareness' : ''}
 
-Structure:
-1. Brief introduction (10% of content)
-2. Main content with key points and details (75% of content)
-3. Thoughtful conclusion with takeaways (15% of content)
+Style Guidelines:
+- Speak directly to the listener (second person: "you")
+- Use present tense and present-moment awareness
+- Include guided breathing or body awareness
+- Be hypnotic, immersive, meditation-like
+- NO facts, NO education, NO explanations about how things work
+- Pure experiential guidance into the desired state
 
-Make this exactly ${targetWords} words to fill the ${durationSec}-second duration. Do not include any formatting, just the script text.`;
+Make this exactly ${targetWords} words to fill the ${durationSec}-second duration. Return only the immersive script text, no formatting.`;
 
     const scriptResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -59,7 +64,7 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
         messages: [
           {
             role: 'system',
-            content: 'You are an expert briefing writer. Create detailed, engaging content that matches the exact word count requested.'
+            content: 'You are a SonicBrief audio experience creator. Create immersive, experiential guided audio that induces the desired mental state. Never create educational content - only direct, present-moment experiences.'
           },
           {
             role: 'user',
