@@ -66,7 +66,6 @@ const Index = () => {
         </>
       )}
       <HowItWorks />
-      <MoodProfiler />
     </div>
   );
 };
