@@ -7,16 +7,26 @@ import { Brain, Zap, Coffee, Moon, Target, Headphones } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const moods = [
-  { id: "focus", name: "Peak Focus", icon: Target, color: "bg-primary", description: "Deep concentration for complex topics" },
-  { id: "energize", name: "Power-Up", icon: Zap, color: "bg-primary-glow", description: "High energy learning and motivation" },
-  { id: "calm", name: "Ambient Chill", icon: Moon, color: "bg-secondary", description: "Relaxed absorption and gentle learning" },
-  { id: "morning", name: "Gentle Wake-Up", icon: Coffee, color: "bg-accent", description: "Easy morning briefings" },
-  { id: "deep", name: "Deep Dive", icon: Brain, color: "bg-primary", description: "Complex concepts with full immersion" },
-  { id: "background", name: "Background Listen", icon: Headphones, color: "bg-muted", description: "Passive learning while multitasking" }
+  { id: "focus", name: "Peak Focus", icon: Target, description: "Deep concentration for complex topics" },
+  { id: "energize", name: "Power-Up", icon: Zap, description: "High energy learning and motivation" },
+  { id: "calm", name: "Ambient Chill", icon: Moon, description: "Relaxed absorption and gentle learning" },
+  { id: "morning", name: "Gentle Wake-Up", icon: Coffee, description: "Easy morning briefings" },
+  { id: "deep", name: "Deep Dive", icon: Brain, description: "Complex concepts with full immersion" },
+  { id: "background", name: "Background Listen", icon: Headphones, description: "Passive learning while multitasking" }
+];
+
+const topics = [
+  { id: "tech", name: "Technology & AI", prompt: "Latest developments in technology and artificial intelligence" },
+  { id: "business", name: "Business & Startups", prompt: "Recent business news and startup innovations" },
+  { id: "science", name: "Science & Health", prompt: "Cutting-edge scientific discoveries and health insights" },
+  { id: "history", name: "History & Culture", prompt: "Fascinating historical events and cultural trends" },
+  { id: "personal", name: "Personal Growth", prompt: "Personal development and productivity strategies" },
+  { id: "news", name: "Current Events", prompt: "Today's important news and global developments" }
 ];
 
 export const MoodProfiler = () => {
   const [selectedMood, setSelectedMood] = useState<string>("");
+  const [selectedTopic, setSelectedTopic] = useState<string>("");
   const [customInstructions, setCustomInstructions] = useState<string>("");
   const [duration, setDuration] = useState<number>(10);
 
@@ -49,14 +59,39 @@ export const MoodProfiler = () => {
                       : ''
                   }`}
                 >
-                  <div className={`w-8 h-8 md:w-10 md:h-10 rounded-lg ${mood.color} flex items-center justify-center mb-2`}>
-                    <mood.icon className="w-4 h-4 md:w-5 md:h-5 text-primary-foreground" />
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-primary/20 flex items-center justify-center mb-2">
+                    <mood.icon className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                   </div>
                   <span className="text-base md:text-lg font-semibold">{mood.name}</span>
                   <span className="text-[13px] md:text-sm leading-snug text-white/80 whitespace-normal break-words [text-wrap:balance] max-w-[22ch] md:max-w-[24ch]">{mood.description}</span>
                 </button>
               ))}
             </div>
+          </Card>
+
+          {/* Topic Selection */}
+          <Card className="p-8 bg-card/50 border-border/20 backdrop-blur-sm">
+            <h3 className="text-2xl font-semibold mb-6 text-foreground">
+              Quick Topic Selection
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {topics.map((topic) => (
+                <Button
+                  key={topic.id}
+                  variant={selectedTopic === topic.id ? "neural" : "outline"}
+                  onClick={() => {
+                    setSelectedTopic(topic.id);
+                    setCustomInstructions(topic.prompt);
+                  }}
+                  className="h-auto py-4 text-sm"
+                >
+                  {topic.name}
+                </Button>
+              ))}
+            </div>
+            <p className="text-sm text-muted-foreground mt-4">
+              Select a topic for recent insights, or describe your own experience below
+            </p>
           </Card>
 
           {/* Custom Instructions */}
@@ -72,9 +107,12 @@ export const MoodProfiler = () => {
               </div>
               <Textarea
                 id="instructions"
-                placeholder="e.g., 'Heavy metal energy for studying computer science' or 'Calm ocean waves for deep work' or 'Motivational power-up for morning workout'"
+                placeholder="e.g., 'Heavy metal energy melody and talk about Japanese hip hop trends' or 'Calm ambient focus for deep work on quantum physics'"
                 value={customInstructions}
-                onChange={(e) => setCustomInstructions(e.target.value)}
+                onChange={(e) => {
+                  setCustomInstructions(e.target.value);
+                  setSelectedTopic(""); // Clear topic selection when typing custom
+                }}
                 className="min-h-[120px] resize-none"
               />
             </div>

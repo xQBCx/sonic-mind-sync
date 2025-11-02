@@ -8,7 +8,7 @@ type BriefStatus =
   | 'queued' | 'summarizing' | 'tts' | 'music' | 'mixing' | 'uploading' | 'ready' | 'error';
 
 export type CreateBriefReq = {
-  mood: 'focus'|'energy'|'calm';
+  mood: string;
   topics?: string[]; // Legacy support
   instructions?: string; // New preferred field
   durationSec: number;

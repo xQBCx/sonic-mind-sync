@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
-import { Loader2, Sparkles, Mic, MicOff, Volume2 } from "lucide-react";
+import { Loader2, Sparkles, Mic, Target, Zap, Moon, Coffee, Brain, Headphones } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { createBrief, saveBriefToHistory } from "@/lib/api";
@@ -15,16 +15,29 @@ import VoiceInterface from "@/components/VoiceInterface";
 import { StimmyAvatar } from "@/components/StimmyAvatar";
 
 const moods = [
-  { id: 'focus', name: 'Focus', description: 'Concentration and clarity', color: 'bg-blue-500/20 text-blue-300' },
-  { id: 'energy', name: 'Energy', description: 'Motivation and drive', color: 'bg-orange-500/20 text-orange-300' },
-  { id: 'calm', name: 'Calm', description: 'Relaxation and peace', color: 'bg-purple-500/20 text-purple-300' }
-] as const;
+  { id: "focus", name: "Peak Focus", icon: Target, description: "Deep concentration for complex topics" },
+  { id: "energize", name: "Power-Up", icon: Zap, description: "High energy learning and motivation" },
+  { id: "calm", name: "Ambient Chill", icon: Moon, description: "Relaxed absorption and gentle learning" },
+  { id: "morning", name: "Gentle Wake-Up", icon: Coffee, description: "Easy morning briefings" },
+  { id: "deep", name: "Deep Dive", icon: Brain, description: "Complex concepts with full immersion" },
+  { id: "background", name: "Background Listen", icon: Headphones, description: "Passive learning while multitasking" }
+];
+
+const topics = [
+  { id: "tech", name: "Technology & AI", prompt: "Latest developments in technology and artificial intelligence" },
+  { id: "business", name: "Business & Startups", prompt: "Recent business news and startup innovations" },
+  { id: "science", name: "Science & Health", prompt: "Cutting-edge scientific discoveries and health insights" },
+  { id: "history", name: "History & Culture", prompt: "Fascinating historical events and cultural trends" },
+  { id: "personal", name: "Personal Growth", prompt: "Personal development and productivity strategies" },
+  { id: "news", name: "Current Events", prompt: "Today's important news and global developments" }
+];
 
 export const InteractiveHero = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
-  const [selectedMood, setSelectedMood] = useState<'focus' | 'energy' | 'calm' | null>(null);
+  const [selectedMood, setSelectedMood] = useState<string>("");
+  const [selectedTopic, setSelectedTopic] = useState<string>("");
   const [customInstructions, setCustomInstructions] = useState("");
   const [duration, setDuration] = useState([120]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -37,14 +50,14 @@ export const InteractiveHero = () => {
     const durationParam = searchParams.get('duration');
     
     if (moodParam && instructionsParam && durationParam && user) {
-      setSelectedMood(moodParam as 'focus' | 'energy' | 'calm');
+      setSelectedMood(moodParam);
       setCustomInstructions(instructionsParam);
       setDuration([parseInt(durationParam) * 60]); // Convert minutes to seconds
       
       // Auto-trigger generation
       setTimeout(() => {
         handleGenerateWithParams(
-          moodParam as 'focus' | 'energy' | 'calm',
+          moodParam,
           instructionsParam,
           parseInt(durationParam) * 60
         );
@@ -53,7 +66,7 @@ export const InteractiveHero = () => {
   }, [searchParams, user]);
 
   const handleGenerateWithParams = async (
-    mood: 'focus' | 'energy' | 'calm',
+    mood: string,
     instructions: string,
     durationSec: number
   ) => {
@@ -145,21 +158,54 @@ export const InteractiveHero = () => {
           <div className="space-y-6">
             {/* Mood Selection */}
             <div>
-              <h3 className="font-semibold mb-4">Choose Your Mood</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {moods.map((mood) => (
+              <h3 className="font-semibold mb-4">Choose Your Learning Mood</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {moods.map((mood) => {
+                  const Icon = mood.icon;
+                  return (
+                    <button
+                      key={mood.id}
+                      onClick={() => setSelectedMood(mood.id)}
+                      disabled={!user}
+                      className={`p-4 rounded-xl border transition flex flex-col items-center justify-center text-center gap-2 ${
+                        selectedMood === mood.id 
+                          ? 'border-primary bg-primary/10 shadow-glow' 
+                          : 'border-border/20 hover:border-border/40'
+                      } ${!user ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                        <Icon className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="text-sm font-semibold">{mood.name}</span>
+                      <span className="text-xs text-muted-foreground">{mood.description}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Topic Selection */}
+            <div>
+              <h3 className="font-semibold mb-4">Quick Topic Selection</h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {topics.map((topic) => (
                   <Button
-                    key={mood.id}
-                    variant={selectedMood === mood.id ? "default" : "outline"}
-                    onClick={() => setSelectedMood(mood.id)}
-                    className="h-auto p-4 flex flex-col items-center space-y-2"
+                    key={topic.id}
+                    variant={selectedTopic === topic.id ? "default" : "outline"}
+                    onClick={() => {
+                      setSelectedTopic(topic.id);
+                      setCustomInstructions(topic.prompt);
+                    }}
+                    className="h-auto py-3 text-sm"
                     disabled={!user}
                   >
-                    <span className="font-semibold">{mood.name}</span>
-                    <span className="text-xs text-muted-foreground">{mood.description}</span>
+                    {topic.name}
                   </Button>
                 ))}
               </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Select a topic for recent insights, or describe your own below
+              </p>
             </div>
 
             {/* Custom Instructions */}
@@ -169,33 +215,35 @@ export const InteractiveHero = () => {
               </Label>
               <Textarea
                 id="hero-instructions"
-                placeholder="e.g., 'Heavy metal energy for studying computer science' or 'Calm focus for morning work'"
+                placeholder="e.g., 'Heavy metal energy melody and talk about Japanese hip hop trends' or 'Calm ambient focus for deep work on quantum physics'"
                 value={customInstructions}
-                onChange={(e) => setCustomInstructions(e.target.value)}
+                onChange={(e) => {
+                  setCustomInstructions(e.target.value);
+                  setSelectedTopic(""); // Clear topic selection when typing custom
+                }}
                 className="min-h-[100px] resize-none"
                 disabled={!user}
               />
               <p className="text-xs text-muted-foreground mt-2">
-                Be specific about the vibe, energy, or focus you're seeking.
+                Tell us what you want to experience. Be specific about the vibe, energy, or focus you're seeking.
               </p>
             </div>
 
             {/* Duration */}
             <div>
-              <h3 className="font-semibold mb-4">Duration</h3>
-              <Slider
-                value={duration}
-                onValueChange={setDuration}
-                min={90}
-                max={180}
-                step={15}
-                className="w-full"
-                disabled={!user}
-              />
-              <div className="text-center mt-2">
-                <span className="text-lg font-semibold text-primary">
-                  {Math.floor(duration[0] / 60)}:{(duration[0] % 60).toString().padStart(2, '0')} minutes
-                </span>
+              <h3 className="font-semibold mb-4">Session Duration</h3>
+              <div className="grid grid-cols-4 gap-3">
+                {[5, 10, 15, 20].map((min) => (
+                  <Button
+                    key={min}
+                    variant={duration[0] === min * 60 ? "default" : "outline"}
+                    onClick={() => setDuration([min * 60])}
+                    disabled={!user}
+                    className="py-3"
+                  >
+                    {min} min
+                  </Button>
+                ))}
               </div>
             </div>
 
