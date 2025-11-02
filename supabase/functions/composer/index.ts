@@ -43,30 +43,9 @@ serve(async (req) => {
     console.log("[composer] Generating TTS voiceover...");
     const voiceoverAudio = await generateTTS(openaiKey, brief.script || "Welcome to your SonicBrief.");
 
-    // Step 2: Fetch loop assets
-    console.log("[composer] Fetching loop assets...");
-    const { data: loops } = await supabase
-      .from("loop_assets")
-      .select("*")
-      .contains("mood", [brief.mood || "focus"])
-      .limit(2);
-
+    // Step 2: Skip loops for now to save memory (MVP)
+    console.log("[composer] Skipping loop assets to conserve memory...");
     let loopBuffers: ArrayBuffer[] = [];
-    if (loops && loops.length > 0) {
-      await supabase
-        .from("briefs")
-        .update({ status: "music", updated_at: new Date().toISOString() })
-        .eq("id", briefId);
-
-      for (const loop of loops) {
-        const { data: loopData } = await supabase.storage
-          .from("loops")
-          .download(loop.path);
-        if (loopData) {
-          loopBuffers.push(await loopData.arrayBuffer());
-        }
-      }
-    }
 
     // Step 3: Generate binaural beats
     console.log("[composer] Generating binaural beats...");

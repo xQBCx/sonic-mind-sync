@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Brain, Zap, Coffee, Moon, Target, Headphones } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -14,23 +15,10 @@ const moods = [
   { id: "background", name: "Background Listen", icon: Headphones, color: "bg-muted", description: "Passive learning while multitasking" }
 ];
 
-const topics = [
-  "AI & Technology", "Business", "Science", "Politics", "Health", 
-  "Climate", "Space", "Economics", "Education", "Startups"
-];
-
 export const MoodProfiler = () => {
   const [selectedMood, setSelectedMood] = useState<string>("");
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [customInstructions, setCustomInstructions] = useState<string>("");
   const [duration, setDuration] = useState<number>(10);
-
-  const toggleTopic = (topic: string) => {
-    setSelectedTopics(prev => 
-      prev.includes(topic) 
-        ? prev.filter(t => t !== topic)
-        : [...prev, topic]
-    );
-  };
 
   return (
     <section className="py-24 bg-background">
@@ -71,22 +59,24 @@ export const MoodProfiler = () => {
             </div>
           </Card>
 
-          {/* Topic Selection */}
+          {/* Custom Instructions */}
           <Card className="p-8 bg-card/50 border-border/20 backdrop-blur-sm">
-            <h3 className="text-2xl font-semibold mb-6 text-foreground">
-              Select Your Topics
-            </h3>
-            <div className="flex flex-wrap gap-3">
-              {topics.map((topic) => (
-                <Badge
-                  key={topic}
-                  variant={selectedTopics.includes(topic) ? "default" : "outline"}
-                  className="cursor-pointer py-2 px-4 text-sm transition-all duration-200 hover:shadow-glow"
-                  onClick={() => toggleTopic(topic)}
-                >
-                  {topic}
-                </Badge>
-              ))}
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="instructions" className="text-2xl font-semibold text-foreground">
+                  Describe Your Experience
+                </Label>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Tell us what you want to experience. Be specific about the vibe, energy, or focus you're seeking.
+                </p>
+              </div>
+              <Textarea
+                id="instructions"
+                placeholder="e.g., 'Heavy metal energy for studying computer science' or 'Calm ocean waves for deep work' or 'Motivational power-up for morning workout'"
+                value={customInstructions}
+                onChange={(e) => setCustomInstructions(e.target.value)}
+                className="min-h-[120px] resize-none"
+              />
             </div>
           </Card>
 
@@ -111,11 +101,12 @@ export const MoodProfiler = () => {
 
           {/* Generate Button */}
           <div className="text-center">
-            <Link to="/">
+            <Link to={`/?mood=${selectedMood}&instructions=${encodeURIComponent(customInstructions)}&duration=${duration}`}>
               <Button 
                 variant="neural" 
                 size="lg" 
                 className="px-12 py-6 text-lg"
+                disabled={!customInstructions.trim() || !selectedMood}
               >
                 Generate My SonicBrief
               </Button>

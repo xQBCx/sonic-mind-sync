@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
 import { Loader2, Sparkles, Mic, MicOff, Volume2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { createBrief, saveBriefToHistory } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
@@ -21,45 +22,57 @@ const moods = [
 
 export const InteractiveHero = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [selectedMood, setSelectedMood] = useState<'focus' | 'energy' | 'calm' | null>(null);
-  const [topicsInput, setTopicsInput] = useState("");
+  const [customInstructions, setCustomInstructions] = useState("");
   const [duration, setDuration] = useState([120]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [showVoiceInterface, setShowVoiceInterface] = useState(false);
 
-  const topics = topicsInput.split(',').map(t => t.trim()).filter(t => t.length > 0);
-
-  const handleGenerate = async () => {
-    if (!user) {
-      navigate('/auth?redirectTo=/');
-      return;
-    }
+  // Auto-fill from URL params and trigger generation
+  useEffect(() => {
+    const moodParam = searchParams.get('mood');
+    const instructionsParam = searchParams.get('instructions');
+    const durationParam = searchParams.get('duration');
     
-    if (!selectedMood || topics.length === 0) {
-      toast({
-        title: "Please complete the form",
-        description: "Select a mood and add some topics to generate your SonicBrief.",
-        variant: "destructive"
-      });
-      return;
+    if (moodParam && instructionsParam && durationParam && user) {
+      setSelectedMood(moodParam as 'focus' | 'energy' | 'calm');
+      setCustomInstructions(instructionsParam);
+      setDuration([parseInt(durationParam) * 60]); // Convert minutes to seconds
+      
+      // Auto-trigger generation
+      setTimeout(() => {
+        handleGenerateWithParams(
+          moodParam as 'focus' | 'energy' | 'calm',
+          instructionsParam,
+          parseInt(durationParam) * 60
+        );
+      }, 100);
     }
+  }, [searchParams, user]);
+
+  const handleGenerateWithParams = async (
+    mood: 'focus' | 'energy' | 'calm',
+    instructions: string,
+    durationSec: number
+  ) => {
+    if (!user) return;
     
     setIsGenerating(true);
     
     try {
       const result = await createBrief({
-        mood: selectedMood,
-        topics,
-        durationSec: duration[0]
+        mood,
+        instructions,
+        durationSec
       });
 
-      // Save to history
       await saveBriefToHistory({
         id: result.briefId,
-        mood: selectedMood,
-        topics,
-        durationSec: duration[0],
+        mood,
+        topics: [instructions],
+        durationSec,
         createdAt: new Date().toISOString(),
         status: 'queued'
       });
@@ -76,9 +89,26 @@ export const InteractiveHero = () => {
         description: "Unable to start brief generation. Please try again.",
         variant: "destructive"
       });
-    } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleGenerate = async () => {
+    if (!user) {
+      navigate('/auth?redirectTo=/');
+      return;
+    }
+    
+    if (!selectedMood || !customInstructions.trim()) {
+      toast({
+        title: "Please complete the form",
+        description: "Select a mood and describe what you want to experience.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    await handleGenerateWithParams(selectedMood, customInstructions, duration[0]);
   };
 
   return (
@@ -132,24 +162,22 @@ export const InteractiveHero = () => {
               </div>
             </div>
 
-            {/* Topics */}
+            {/* Custom Instructions */}
             <div>
-              <h3 className="font-semibold mb-4">What Topics Interest You?</h3>
-              <Input
-                placeholder="AI, Technology, Health, Science... (comma-separated)"
-                value={topicsInput}
-                onChange={(e) => setTopicsInput(e.target.value)}
+              <Label htmlFor="hero-instructions" className="font-semibold mb-4 block">
+                Describe Your Experience
+              </Label>
+              <Textarea
+                id="hero-instructions"
+                placeholder="e.g., 'Heavy metal energy for studying computer science' or 'Calm focus for morning work'"
+                value={customInstructions}
+                onChange={(e) => setCustomInstructions(e.target.value)}
+                className="min-h-[100px] resize-none"
                 disabled={!user}
               />
-              {topics.length > 0 && (
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {topics.map((topic, index) => (
-                    <Badge key={index} variant="secondary" className="bg-primary/20">
-                      {topic}
-                    </Badge>
-                  ))}
-                </div>
-              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Be specific about the vibe, energy, or focus you're seeking.
+              </p>
             </div>
 
             {/* Duration */}
@@ -174,7 +202,7 @@ export const InteractiveHero = () => {
             {/* Generate Button */}
             <Button
               onClick={handleGenerate}
-              disabled={!user || !selectedMood || topics.length === 0 || isGenerating}
+              disabled={!user || !selectedMood || !customInstructions.trim() || isGenerating}
               className="w-full py-6 text-lg"
               size="lg"
             >

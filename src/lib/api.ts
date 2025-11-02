@@ -9,7 +9,8 @@ type BriefStatus =
 
 export type CreateBriefReq = {
   mood: 'focus'|'energy'|'calm';
-  topics: string[];
+  topics?: string[]; // Legacy support
+  instructions?: string; // New preferred field
   durationSec: number;
 };
 export type Brief = {

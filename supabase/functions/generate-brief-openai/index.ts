@@ -9,12 +9,13 @@ const corsHeaders = {
 
 interface GenerateBriefRequest {
   mood: 'focus' | 'energy' | 'calm';
-  topics: string[];
+  topics?: string[]; // Legacy support
+  instructions?: string; // New preferred field
   durationSec: number;
 }
 
 // Generate script and compose audio
-async function generateAudioOpenAI(briefId: string, mood: string, topics: string[], durationSec: number, openaiKey: string, supabaseUrl: string, supabaseAnonKey: string, authHeader: string) {
+async function generateAudioOpenAI(briefId: string, mood: string, userPrompt: string, durationSec: number, openaiKey: string, supabaseUrl: string, supabaseAnonKey: string, authHeader: string) {
   try {
     console.log('Starting content generation for brief:', briefId, 'Duration:', durationSec);
     
@@ -34,7 +35,7 @@ async function generateAudioOpenAI(briefId: string, mood: string, topics: string
     await supabase.from('briefs').update({ status: 'summarizing' }).eq('id', briefId);
     
     // Generate experiential audio script with OpenAI
-    const scriptPrompt = `Create an immersive, experiential ${durationSec}-second (approximately ${targetWords} words) audio experience for "${topics.join(', ')}" in a ${mood} style.
+    const scriptPrompt = `Create an immersive, experiential ${durationSec}-second (approximately ${targetWords} words) audio experience based on: "${userPrompt}" in a ${mood} style.
 
 CRITICAL: This is NOT educational content. The user wants to EXPERIENCE ${mood}, not learn ABOUT ${mood}.
 
@@ -84,13 +85,11 @@ Make this exactly ${targetWords} words to fill the ${durationSec}-second duratio
     } else {
       console.log('OpenAI script generation failed, using fallback');
       // Fallback script
-      script = `Welcome to your ${mood} briefing about ${topics.join(', ')}. ` +
-        `This topic is important and deserves our attention. Let's explore the key aspects, ` +
-        `understand the implications, and consider the broader context. ` +
-        `${topics.map(topic => `Regarding ${topic}, there are several important considerations to keep in mind.`).join(' ')} ` +
-        `These developments continue to evolve and impact various aspects of our world. ` +
-        `By staying informed and maintaining a ${mood} approach, we can better understand these complex issues. ` +
-        `Thank you for taking the time to stay informed about these important topics.`;
+      script = `Welcome to your ${mood} experience. ` +
+        `Take a deep breath and let yourself fully immerse in this moment. ` +
+        `Feel the energy shifting as you focus on ${userPrompt}. ` +
+        `This is your time to grow, to focus, to become more aligned with your goals. ` +
+        `Each moment brings you closer to clarity and understanding.`;
     }
     
     // Update status to TTS
@@ -221,14 +220,25 @@ serve(async (req) => {
     // Parse request body
     console.log('Parsing request body...');
     const requestBody = await req.json();
-    const { mood, topics, durationSec } = requestBody;
-    console.log('Request parameters:', { mood, topics, durationSec });
+    const { mood, topics, instructions, durationSec } = requestBody;
+    
+    // Support both old topics array format and new instructions string
+    const userPrompt = instructions || (topics && topics.length > 0 ? topics.join(', ') : '');
+    
+    console.log('Request parameters:', { mood, userPrompt: userPrompt.slice(0, 100), durationSec });
+    
+    if (!userPrompt) {
+      return new Response(JSON.stringify({ error: 'Either instructions or topics is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Insert brief into database
     const briefData = {
       user_id: user.id,
       mood,
-      topics,
+      topics: instructions ? [instructions] : topics, // Store instructions as single-item array for compatibility
       duration_sec: durationSec,
       status: 'queued'
     };
@@ -253,7 +263,7 @@ serve(async (req) => {
     const backgroundTask = generateAudioOpenAI(
       brief.id, 
       mood, 
-      topics, 
+      userPrompt, 
       durationSec, 
       openaiKey,
       supabaseUrl, 
