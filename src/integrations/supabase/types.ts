@@ -482,35 +482,20 @@ export type Database = {
       }
     }
     Views: {
-      admin_users_view: {
-        Row: {
-          approved_at: string | null
-          approved_by: string | null
-          created_at: string | null
-          email: string | null
-          role: Database["public"]["Enums"]["app_role"] | null
-          user_id: string | null
-        }
-        Insert: {
-          approved_at?: string | null
-          approved_by?: string | null
-          created_at?: string | null
-          email?: never
-          role?: Database["public"]["Enums"]["app_role"] | null
-          user_id?: string | null
-        }
-        Update: {
-          approved_at?: string | null
-          approved_by?: string | null
-          created_at?: string | null
-          email?: never
-          role?: Database["public"]["Enums"]["app_role"] | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
+      admin_get_users_with_roles: {
+        Args: never
+        Returns: {
+          approved_at: string
+          approved_by: string
+          created_at: string
+          email: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }[]
+      }
       create_user_profile: {
         Args: {
           p_age?: number
@@ -523,7 +508,6 @@ export type Database = {
         Returns: undefined
       }
       get_platform_stats: { Args: never; Returns: Json }
-      get_user_email: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
