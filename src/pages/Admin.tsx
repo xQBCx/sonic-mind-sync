@@ -53,39 +53,24 @@ export default function Admin() {
   const loadUsers = async () => {
     setLoading(true);
     
-    // Get all user roles with profile data
-    const { data: rolesData, error: rolesError } = await supabase
-      .from('user_roles')
-      .select(`
-        user_id,
-        role,
-        created_at
-      `)
-      .order('created_at', { ascending: false });
+    // Call the secure admin function to get users with emails
+    const { data: usersData, error } = await supabase
+      .rpc('admin_get_users_with_roles');
 
-    if (rolesError) {
+    if (error) {
       toast.error('Failed to load users');
+      console.error(error);
       setLoading(false);
       return;
     }
 
-    // Get profile emails for each user
-    const userIds = rolesData.map(r => r.user_id);
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('user_id, id')
-      .in('user_id', userIds);
-
-    // Map user IDs to emails (we'll show user ID if no profile)
-    const usersWithRoles = rolesData.map(role => {
-      const profile = profiles?.find(p => p.user_id === role.user_id);
-      return {
-        user_id: role.user_id,
-        email: profile ? `User ${role.user_id.slice(0, 8)}...` : `User ${role.user_id.slice(0, 8)}...`,
-        role: role.role as 'admin' | 'user' | 'pending',
-        created_at: role.created_at
-      };
-    });
+    // Map to component format
+    const usersWithRoles = usersData.map((user: any) => ({
+      user_id: user.user_id,
+      email: user.email || `User ${user.user_id.slice(0, 8)}...`,
+      role: user.role as 'admin' | 'user' | 'pending',
+      created_at: user.created_at
+    }));
 
     setUsers(usersWithRoles);
     setLoading(false);
@@ -131,7 +116,11 @@ export default function Admin() {
   const rejectUser = async (userId: string) => {
     setProcessing(userId);
     
-    const { error } = await supabase.auth.admin.deleteUser(userId);
+    // Just delete the role entry - they can re-register if needed
+    const { error } = await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', userId);
 
     if (error) {
       toast.error('Failed to reject user');
