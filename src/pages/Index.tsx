@@ -14,10 +14,14 @@ import { TestimonialForm } from "@/components/TestimonialForm";
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { PendingApproval } from "@/components/PendingApproval";
 
 const Index = () => {
   const { user, loading } = useAuth();
   const [referralCode, setReferralCode] = useState<string>("");
+  const [isPending, setIsPending] = useState(false);
+  const [checkingRole, setCheckingRole] = useState(true);
 
   useEffect(() => {
     // Extract referral code from URL params
@@ -28,7 +32,24 @@ const Index = () => {
     }
   }, []);
 
-  if (loading) {
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
+        
+        setIsPending(data?.role === 'pending');
+      }
+      setCheckingRole(false);
+    };
+
+    checkUserRole();
+  }, [user]);
+
+  if (loading || checkingRole) {
     return (
       <div className="min-h-screen bg-gradient-background flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -41,14 +62,18 @@ const Index = () => {
       {!user && <PromoVideoModal />}
       <Header />
       {user ? (
-        <>
-          <InteractiveHero />
-          <div className="container mx-auto px-4 py-8 flex justify-center">
-            <div className="w-full max-w-md">
-              <ReferralTracker userEmail={user.email} />
+        isPending ? (
+          <PendingApproval />
+        ) : (
+          <>
+            <InteractiveHero />
+            <div className="container mx-auto px-4 py-8 flex justify-center">
+              <div className="w-full max-w-md">
+                <ReferralTracker userEmail={user.email} />
+              </div>
             </div>
-          </div>
-        </>
+          </>
+        )
       ) : (
         <>
           <Hero />

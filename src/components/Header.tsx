@@ -2,13 +2,32 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
 import { Link, useLocation } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import logoIcon from '@/assets/logo-play-icon2.png'
+import { supabase } from '@/integrations/supabase/client'
 
 export function Header() {
   const { user, signOut } = useAuth()
   const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (user) {
+        const { data } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .eq('role', 'admin')
+          .single();
+        
+        setIsAdmin(!!data);
+      }
+    };
+
+    checkAdmin();
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut()
@@ -39,6 +58,11 @@ export function Header() {
               <Link to="/schedules" className="text-muted-foreground hover:text-foreground transition-colors">
                 Schedules
               </Link>
+              {isAdmin && (
+                <Link to="/admin" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Admin
+                </Link>
+              )}
             </>
           )}
         </nav>
@@ -109,6 +133,15 @@ export function Header() {
                 >
                   Schedules
                 </Link>
+                {isAdmin && (
+                  <Link 
+                    to="/admin" 
+                    className="block text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Admin
+                  </Link>
+                )}
               </>
             )}
             
